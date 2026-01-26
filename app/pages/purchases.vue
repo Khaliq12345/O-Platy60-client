@@ -2,8 +2,12 @@
   <UDashboardPanel>
     <template #header>
       <CustomDashboardNav title="Achats">
-        <UButton icon="i-lucide-plus">Nouvelle Commande</UButton>
+        <PurchaseAdd />
       </CustomDashboardNav>
+    </template>
+
+    <template #body>
+      <PurchaseList />
     </template>
   </UDashboardPanel>
 </template>

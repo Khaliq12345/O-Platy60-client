@@ -5,8 +5,18 @@ export default defineNuxtConfig({
     buildAssetsDir: "/_nuxt/",
   },
 
+  runtimeConfig: {
+    public: {
+      apiBaseUrl: "http://localhost:8000/v1"
+    }
+  },
+
   // Ensure the module is properly initialized
-  modules: ["@nuxt/ui"],
+  modules: [
+    "@nuxt/ui",
+    "@pinia-plugin-persistedstate/nuxt",
+    "@pinia/nuxt",
+  ],
 
   devtools: {
     enabled: true,
