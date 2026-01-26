@@ -8,7 +8,7 @@ const purchases = ref<PurchaseItem[]>([])
 const categories = ref<Category[]>([])
 
 // Filtres
-const searchQuery = ref('')
+const searchQuery = ref('')  // Filtre local uniquement
 const selectedCategory = ref<string | undefined>(undefined)
 const startDate = ref<string | undefined>(undefined)
 const endDate = ref<string | undefined>(undefined)
@@ -17,6 +17,18 @@ const endDate = ref<string | undefined>(undefined)
 const currentPage = ref(1)
 const itemsPerPage = ref(20)
 const totalPages = ref(1)
+
+// Données filtrées localement (pour la recherche par nom)
+const filteredPurchases = computed(() => {
+  if (!searchQuery.value.trim()) {
+    return purchases.value
+  }
+  
+  const query = searchQuery.value.toLowerCase().trim()
+  return purchases.value.filter(purchase => 
+    purchase.item_name.toLowerCase().includes(query)
+  )
+})
 
 async function loadCategories() {
   categories.value = await get<Category[]>('/categories')
@@ -28,16 +40,17 @@ async function loadPurchases() {
     limit: itemsPerPage.value
   }
   
+  // Pas de searchQuery ici - filtre local uniquement
   if (selectedCategory.value) {
     query.category_id = selectedCategory.value
   }
   
   if (startDate.value) {
-    query.start_date = startDate.value  // Format: 2026-01-26
+    query.start_date = startDate.value
   }
   
   if (endDate.value) {
-    query.end_date = endDate.value      // Format: 2026-01-26
+    query.end_date = endDate.value
   }
   
   const response = await get<PurchaseItem[]>('/purchases', query)
@@ -84,14 +97,14 @@ function handleExport() {
     
     <PurchaseListFilters 
       :categories="categories"
-      @update:search="searchQuery = $event"
+      v-model:search="searchQuery"
       @update:category="selectedCategory = $event; loadPurchases()"
       @update:date-range="handleDateRange"
       @export="handleExport"
     />
     
     <PurchaseListTable 
-      :purchases="purchases"
+      :purchases="filteredPurchases"
       :categories="categories"
       @view="handleView"
       @edit="handleEdit"
