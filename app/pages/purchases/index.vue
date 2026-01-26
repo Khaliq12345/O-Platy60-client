@@ -2,7 +2,6 @@
   <UDashboardPanel>
     <template #header>
       <CustomDashboardNav title="Achats">
-        <PurchaseAdd />
       </CustomDashboardNav>
     </template>
 

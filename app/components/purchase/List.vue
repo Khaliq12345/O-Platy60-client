@@ -70,9 +70,6 @@ function handleDateRange(start: string | undefined, end: string | undefined) {
 }
 
 // Actions
-function handleNewPurchase() {
-  // Ouvrir drawer de création
-}
 
 function handleView(item: PurchaseItem) {
   console.log('View', item)
@@ -93,7 +90,7 @@ function handleExport() {
 
 <template>
   <div class="p-4 mx-auto">
-    <PurchaseListHeader @new-purchase="handleNewPurchase" />
+    <PurchaseListHeader />
     
     <PurchaseListFilters 
       :categories="categories"

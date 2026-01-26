@@ -2,25 +2,23 @@
 import { z } from "zod";
 import type { FormSubmitEvent } from "@nuxt/ui";
 import type { CreatePurchaseInput } from "~/types/purchase";
-import { Category } from "~/types/category";
+import type { Category } from "~/types/category";
+import { CalendarDate, today, getLocalTimeZone } from "@internationalized/date";
 
-const emit = defineEmits<{
-  "update:modelValue": [value: boolean];
-  submit: [data: CreatePurchaseInput];
-}>();
+definePageMeta({
+  layout: "default",
+});
 
-// État du drawer
-const isOpen = ref(false);
+const router = useRouter();
+const { get, post } = useApi();
 
 // Schéma Zod de validation
 const schema = z.object({
   item_name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
   quantity: z.number().min(1, "La quantité doit être d'au moins 1"),
   unit: z.string().min(1, "L'unité est requise"),
-  price_per_unit: z.number().min(0.01, "Le prix doit être supériXOF à 0"),
-  purchase_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date invalide (YYYY-MM-DD)"),
+  price_per_unit: z.number().min(0.01, "Le prix doit être supérieur à 0"),
+  purchase_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date invalide"),
   category_id: z.string().min(1, "La catégorie est requise"),
   notes: z.string().optional(),
 });
@@ -30,22 +28,33 @@ type Schema = z.output<typeof schema>;
 // État du formulaire
 const state = reactive<Partial<Schema>>({
   item_name: "",
-  quantity: 1,
-  unit: "pièce",
-  price_per_unit: 0,
+  quantity: undefined,
+  unit: undefined,
+  price_per_unit: undefined,
   purchase_date: new Date().toISOString().split("T")[0],
   category_id: "",
   notes: "",
 });
 
-// Calcul du prix total (affichage uniquement)
+// Date pour le calendrier popup
+const selectedDate = ref<CalendarDate>(today(getLocalTimeZone()));
+const isCalendarOpen = ref(false);
+
+// Sync date calendrier avec state
+watch(selectedDate, (newDate) => {
+  if (newDate) {
+    state.purchase_date = newDate.toString();
+  }
+});
+
+// Calcul du prix total
 const totalPrice = computed(() => {
   if (!state.quantity || !state.price_per_unit) return 0;
   return state.quantity * state.price_per_unit;
 });
 
 // Catégories dynamiques
-const categories = ref<{ label: string; value: string }[]>([])
+const categories = ref<{ label: string; value: string }[]>([]);
 
 // Unités prédéfinies
 const units = [
@@ -62,15 +71,13 @@ const toast = useToast();
 // Soumission du formulaire
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   try {
-    const { post } = useApi();
-
     const purchaseData = {
       ...event.data,
       total_price: totalPrice.value,
-      created_by: "current_user", // À remplacer par l'utilisateur connecté
+      created_by: "42ad2622-23a6-4fce-91fd-4c1996bb2902",
     };
 
-    await post("/purchases", purchaseData);
+    await post("/purchases/", purchaseData);
 
     toast.add({
       title: "Succès",
@@ -78,19 +85,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       color: "success",
     });
 
-    emit("submit", purchaseData);
-    isOpen.value = false;
-
-    // Reset du formulaire
-    Object.assign(state, {
-      item_name: "",
-      quantity: 1,
-      unit: "pièce",
-      price_per_unit: 0,
-      purchase_date: new Date().toISOString().split("T")[0],
-      category_id: "",
-      notes: "",
-    });
+    router.push("/purchases");
   } catch (error) {
     toast.add({
       title: "Erreur",
@@ -100,168 +95,157 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   }
 }
 
-// Fermer sans sauvegarder
+// Annuler et retour
 function onCancel() {
-  isOpen.value = false;
+  router.push("/purchases");
 }
 
+// Charger les catégories
 onMounted(async () => {
-  const { get } = useApi()
-  const response = await get<Category[]>('/categories')
-  categories.value = response.map(cat => ({
+  const response = await get<Category[]>("/categories");
+  categories.value = response.map((cat) => ({
     label: cat.name,
-    value: cat.id
-  }))
-})
-
+    value: cat.id,
+  }));
+});
 </script>
 
 <template>
-  <UDrawer
-    v-model:open="isOpen"
-    direction="right"
-    Description="Fill data to complete purchase"
-    DialogTitle="New purchase"
-    aria-describedby="Purchase form"
-    :inset="false"
-    :handle="false"
-    :dismissible="true"
-    :ui="{
-      content: 'w-full max-w-md rounded-none',
-    }"
-  >
-    <UButton
-      label="Nouvelle commande"
-      color="primary"
-      variant="subtle"
-      @click="isOpen = true"
-    />
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div class="max-w-2xl mx-auto px-4 py-8">
+      <!-- Lien retour -->
+      <UButton
+        color="neutral"
+        variant="link"
+        icon="i-heroicons-arrow-left"
+        label="Retour"
+        class="mb-4 px-0"
+        @click="onCancel"
+      />
 
-    <template #header>
-      <div class="flex items-center gap-2">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-          Nouvel achat
-        </h2>
-      </div>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-        Remplissez les informations ci-dessous
-      </p>
-    </template>
+      <!-- Titre -->
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-8">
+        Nouvel Achat
+      </h1>
 
-    <template #body>
-      <UForm
-        :schema="schema"
-        :state="state"
-        class="grid grid-cols-1 gap-2"
-        @submit="onSubmit"
-      >
-        <!-- Nom de l'article -->
-        <UFormField label="Nom de l'article" name="item_name" required>
-          <UInput
-            v-model="state.item_name"
-            placeholder="Ex: OrdinatXOF portable"
-            icon="i-heroicons-shopping-bag"
-            class="w-full"
-          />
-        </UFormField>
-
-        <!-- Quantité et Unité (côte à côte) -->
-        <div class="grid grid-cols-2 gap-4">
-          <UFormField label="Quantité" name="quantity" required>
+      <!-- Formulaire -->
+      <UCard class="shadow-sm">
+        <UForm
+          :schema="schema"
+          :state="state"
+          class="space-y-6"
+          @submit="onSubmit"
+        >
+          <!-- Nom de l'article -->
+          <UFormField label="Nom de l'article" name="item_name" required>
             <UInput
-              v-model="state.quantity"
-              type="number"
-              min="1"
-              placeholder="1"
+              v-model="state.item_name"
+              placeholder="Rechercher ou créer un article..."
               class="w-full"
             />
           </UFormField>
 
-          <UFormField label="Unité" name="unit" required>
+          <!-- Catégorie -->
+          <UFormField label="Catégorie" name="category_id" required>
             <USelect
-              v-model="state.unit"
-              :items="units"
-              placeholder="Choisir..."
+              v-model="state.category_id"
+              :items="categories"
+              placeholder="Sélectionner une catégorie"
               class="w-full"
             />
           </UFormField>
-        </div>
 
-        <div class="grid grid-cols-2 gap-4">
+          <!-- Quantité et Unité -->
+          <div class="grid grid-cols-2 gap-4">
+            <UFormField label="Quantité" name="quantity" required>
+              <UInput
+                v-model="state.quantity"
+                type="number"
+                min="1"
+                placeholder="ex: 10"
+                class="w-full"
+              />
+            </UFormField>
+
+            <UFormField label="Unité" name="unit" required>
+              <USelect
+                v-model="state.unit"
+                :items="units"
+                placeholder="Sélectionner une unité"
+                class="w-full"
+              />
+            </UFormField>
+          </div>
+
           <!-- Prix par unité -->
-          <UFormField label="Prix par unité" name="price_per_unit" required>
+          <UFormField
+            label="Prix par unité (FCFA)"
+            name="price_per_unit"
+            required
+          >
             <UInput
               v-model="state.price_per_unit"
               type="number"
               step="0.01"
               min="0"
-              placeholder="0.00"
-              class="w-full"
-            >
-              <template #trailing>
-                <span class="text-gray-500">F</span>
-              </template>
-            </UInput>
-          </UFormField>
-
-          <!-- Prix total (calculé, non modifiable) -->
-          <UFormField label="Prix total (calculé)">
-            <UInput
-              :model-value="
-                totalPrice.toLocaleString('fr-FR', {
-                  style: 'currency',
-                  currency: 'XOF',
-                })
-              "
-              disabled
-              color="neutral"
+              placeholder="ex: 2500"
               class="w-full"
             />
           </UFormField>
-        </div>
 
-        <!-- Date d'achat -->
-        <UFormField label="Date d'achat" name="purchase_date" required>
-          <UInput v-model="state.purchase_date" type="date" class="w-full" />
-        </UFormField>
+          <!-- Prix total (calculé) -->
+          <UFormField label="Prix Total" required>
+            <div
+              class="text-2xl font-bold text-primary-600 dark:text-primary-400"
+            >
+              {{ totalPrice.toLocaleString("fr-FR") }} FCFA
+            </div>
+          </UFormField>
 
-        <!-- Catégorie -->
-        <UFormField label="Catégorie" name="category_id" required>
-          <USelect
-            v-model="state.category_id"
-            :items="categories"
-            placeholder="Choisir une catégorie..."
-            icon="i-heroicons-tag"
-            class="w-full"
-          />
-        </UFormField>
+          <!-- Date d'achat avec calendrier popup -->
+          <UFormField label="Date d'achat" name="purchase_date" required>
+            <UPopover v-model:open="isCalendarOpen">
+              <UButton
+                color="neutral"
+                variant="outline"
+                class="w-full justify-between font-normal"
+                :label="
+                  state.purchase_date
+                    ? new Date(state.purchase_date).toLocaleDateString('fr-FR')
+                    : 'JJ/MM/AAAA'
+                "
+                trailing-icon="i-heroicons-calendar-days"
+              />
 
-        <!-- Notes -->
-        <UFormField label="Notes" name="notes">
-          <UTextarea
-            v-model="state.notes"
-            placeholder="Notes additionnelles (optionnel)..."
-            :rows="3"
-            class="w-full"
-          />
-        </UFormField>
-      </UForm>
-      <!-- Boutons d'action (dans le body car footer est fixe) -->
-      <div class="grid grid-cols-2 gap-2">
-        <UButton
-          type="submit"
-          color="primary"
-          label="Créer l'achat"
-        />
-        <UButton
-          type="button"
-          color="neutral"
-          variant="soft"
-          label="Annuler"
-          @click="onCancel"
-        />
-      </div>
-    </template>
-    <template #footer> </template>
-  </UDrawer>
+              <template #content>
+                <UCalendar v-model="selectedDate" class="p-2" />
+              </template>
+            </UPopover>
+          </UFormField>
+
+          <!-- Notes -->
+          <UFormField label="Notes" name="notes">
+            <UTextarea
+              v-model="state.notes"
+              placeholder="Ajouter des détails supplémentaires..."
+              :rows="4"
+              class="w-full"
+            />
+          </UFormField>
+
+          <!-- Boutons -->
+          <div class="flex justify-end gap-3 pt-4">
+            <UButton
+              type="button"
+              color="neutral"
+              variant="soft"
+              label="Annuler"
+              @click="onCancel"
+            />
+            <UButton type="submit" color="primary" label="Enregistrer" />
+          </div>
+        </UForm>
+      </UCard>
+    </div>
+  </div>
 </template>

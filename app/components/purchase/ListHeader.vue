@@ -13,7 +13,7 @@ const emit = defineEmits<{
       color="primary" 
       label="Nouvel Achat"
       icon="i-heroicons-plus"
-      @click="emit('new-purchase')"
+      to="/purchases/add"
     />
   </div>
 </template>
