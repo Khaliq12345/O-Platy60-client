@@ -19,3 +19,12 @@ export interface CreatePurchaseInput {
   category_id: string
   notes: string
 }
+
+export interface PurchaseDetail extends PurchaseItem {
+  category_name: string
+  created_by_name: string
+  used_quantity: number
+  remaining_quantity: number
+  is_transformed: boolean
+  notes?: string
+}

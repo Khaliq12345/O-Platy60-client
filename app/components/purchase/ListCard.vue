@@ -40,7 +40,7 @@ const categoryStyle = computed(() => {
 </script>
 
 <template>
-  <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+  <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 last:border-0">
     <td class="py-3 px-4 text-sm text-gray-900 dark:text-white">
       {{ new Date(item.purchase_date).toLocaleDateString('fr-FR') }}
     </td>
@@ -59,17 +59,6 @@ const categoryStyle = computed(() => {
       {{ item.total_price.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' }) }}
     </td>
     <td class="py-3 px-4">
-      <!-- Version avec couleur Tailwind (UBadge) -->
-      <!-- <UBadge 
-        class="categoryColor" 
-        variant="subtle"
-        class="rounded-full"
-      >
-        {{ category?.name || 'Sans catégorie' }}
-      </UBadge> -->
-      
-      <!-- Alternative: style inline pour couleur exacte HSL -->
-      
       <span 
         class="px-2 py-1 rounded-full text-xs font-medium"
         :style="categoryStyle"
@@ -88,7 +77,7 @@ const categoryStyle = computed(() => {
           variant="ghost" 
           icon="i-heroicons-eye"
           size="xs"
-          @click="emit('view', item)"
+          :to="`/purchases/${props.item.id}`"
         />
         <UButton 
           color="neutral" 
