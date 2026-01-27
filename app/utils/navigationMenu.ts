@@ -4,7 +4,7 @@ export const Navitems: NavigationMenuItem[][] = [
   [
     {
       label: "Tableau de bord",
-      icon: "i-lucide-dashboard",
+      icon: "i-lucide-layout-dashboard",
       active: true,
     },
     {
@@ -13,11 +13,11 @@ export const Navitems: NavigationMenuItem[][] = [
     },
     {
       label: "Stock",
-      icon: "i-lucide-stock",
+      icon: "i-lucide-box",
     },
     {
       label: "Transformations",
-      icon: "i-lucide-stock",
+      icon: "i-lucide-replace-all",
     },
     {
       label: "Parametres",

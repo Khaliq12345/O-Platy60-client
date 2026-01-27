@@ -7,16 +7,12 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBaseUrl: "http://localhost:8000/v1"
-    }
+      apiBaseUrl: "http://localhost:8000/v1",
+    },
   },
 
   // Ensure the module is properly initialized
-  modules: [
-    "@nuxt/ui",
-    "@pinia-plugin-persistedstate/nuxt",
-    "@pinia/nuxt",
-  ],
+  modules: ["@nuxt/ui", "@pinia/nuxt"],
 
   devtools: {
     enabled: true,
