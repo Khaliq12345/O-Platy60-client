@@ -1,68 +1,71 @@
 <template>
-  <div class="p-1 lg:mx-auto">
-    <PurchaseListHeader />
-
-    <PurchaseListFilters
-      :categories="categories"
-      v-model:search="searchQuery"
-      @update:category="
-        selectedCategory = $event;
-        loadPurchases();
-      "
-      @update:date-range="handleDateRange"
-      @export="handleExport"
-    />
+  <div class="p-1 flex flex-col justify-between h-full lg:mx-auto">
+    <div>
+      <PurchaseListHeader />
+      <PurchaseListFilters
+        v-model:search="searchQuery"
+        v-model:category="selectedCategory"
+        v-model:date-range="dateRange"
+        @export="handleExport"
+      />
+    </div>
 
     <PurchaseListTable
       :purchases="filteredPurchases"
       :categories="categories"
-      @view="handleView"
       @edit="handleEdit"
       @delete="handleDelete"
+      class="grow"
     />
 
     <PurchaseListPagination
-      v-model:current-page="currentPage"
-      v-model:items-per-page="itemsPerPage"
-      :total-pages="totalPages"
-      @update:current-page="loadPurchases()"
-      @update:items-per-page="loadPurchases()"
-    />
+    v-model:current-page="currentPage"
+    v-model:items-per-page="itemsPerPage"
+    :total-pages="totalPages"
+    :total-items="totalItems"
+    @update:current-page="loadPurchases()"
+    @update:items-per-page="loadPurchases()"
+  />
   </div>
 </template>
 
 <script setup lang="ts">
 import type { Category } from "~/types/category";
 import type { PurchaseItem } from "~/types/purchase";
+import { CalendarDate, today, getLocalTimeZone } from "@internationalized/date";
 
 const { get } = useApi();
 
 const purchases = ref<PurchaseItem[]>([]);
 const categories = ref<Category[]>([]);
-
-// Filtres
-const searchQuery = ref(""); // Filtre local uniquement
+const searchQuery = ref("");
 const selectedCategory = ref<string | undefined>(undefined);
-const startDate = ref<string | undefined>(undefined);
-const endDate = ref<string | undefined>(undefined);
+
+// Objet CalendarDate pour toute l'UI
+const now = today(getLocalTimeZone());
+const dateRange = ref({
+  start: new CalendarDate(now.year, 1, 1),
+  end: now
+});
+
+// Computed pour l'API (conversion en string uniquement quand nécessaire)
+const startDate = computed(() => dateRange.value?.start?.toString());
+const endDate = computed(() => dateRange.value?.end?.toString());
 
 // Pagination
 const currentPage = ref(1);
 const itemsPerPage = ref(20);
 const totalPages = ref(1);
 
-// Provide
 provide("categories", categories);
 
-// Données filtrées localement (pour la recherche par nom)
-const filteredPurchases = computed(() => {
-  if (!searchQuery.value.trim()) {
-    return purchases.value;
-  }
+const totalItems = ref(0);
 
+const filteredPurchases = computed(() => {
+  if (!searchQuery.value.trim()) return purchases.value;
   const query = searchQuery.value.toLowerCase().trim();
   return purchases.value.filter((purchase) =>
-    purchase.item_name.toLowerCase().includes(query),
+    purchase.item_name.toLowerCase().includes(query)
   );
 });
 
@@ -76,35 +79,27 @@ async function loadPurchases() {
     limit: itemsPerPage.value,
   };
 
-  // Pas de searchQuery ici - filtre local uniquement
   if (selectedCategory.value) {
     query.category_id = selectedCategory.value;
   }
 
-  if (startDate.value) {
-    query.start_date = startDate.value;
-  }
-
-  if (endDate.value) {
-    query.end_date = endDate.value;
-  }
+  if (startDate.value) query.start_date = startDate.value;
+  if (endDate.value) query.end_date = endDate.value;
 
   const response = await get<PurchaseItem[]>("/purchases", query);
   purchases.value = response;
 }
 
-// Gestion de la plage de dates
-function handleDateRange(start: string | undefined, end: string | undefined) {
-  startDate.value = start;
-  endDate.value = end;
+// Watcher sur dateRange - recharge automatiquement quand ça change
+watch(() => dateRange.value, () => {
+  currentPage.value = 1;
   loadPurchases();
-}
+}, { deep: true });
 
-// Actions des buttons
-
-function handleView(item: PurchaseItem) {
-  console.log("View", item);
-}
+watch(() => selectedCategory.value, () => {
+  currentPage.value = 1;
+  loadPurchases();
+});
 
 function handleEdit(item: PurchaseItem) {
   console.log("Edit", item);
@@ -118,7 +113,6 @@ function handleExport() {
   console.log("Export CSV");
 }
 
-// When component load
 onMounted(() => {
   loadCategories();
   loadPurchases();
