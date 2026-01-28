@@ -19,13 +19,13 @@
     />
 
     <PurchaseListPagination
-    v-model:current-page="currentPage"
-    v-model:items-per-page="itemsPerPage"
-    :total-pages="totalPages"
-    :total-items="totalItems"
-    @update:current-page="loadPurchases()"
-    @update:items-per-page="loadPurchases()"
-  />
+      v-model:current-page="currentPage"
+      v-model:items-per-page="itemsPerPage"
+      :total-pages="totalPages"
+      :total-items="totalItems"
+      @update:current-page="loadPurchases()"
+      @update:items-per-page="loadPurchases()"
+    />
   </div>
 </template>
 
@@ -45,7 +45,7 @@ const selectedCategory = ref<string | undefined>(undefined);
 const now = today(getLocalTimeZone());
 const dateRange = ref({
   start: new CalendarDate(now.year, 1, 1),
-  end: now
+  end: now.add({ years: 1 }),
 });
 
 // Computed pour l'API (conversion en string uniquement quand nécessaire)
@@ -65,7 +65,7 @@ const filteredPurchases = computed(() => {
   if (!searchQuery.value.trim()) return purchases.value;
   const query = searchQuery.value.toLowerCase().trim();
   return purchases.value.filter((purchase) =>
-    purchase.item_name.toLowerCase().includes(query)
+    purchase.item_name.toLowerCase().includes(query),
   );
 });
 
@@ -87,19 +87,27 @@ async function loadPurchases() {
   if (endDate.value) query.end_date = endDate.value;
 
   const response = await get<PurchaseItem[]>("/purchases", query);
+  console.log(response);
   purchases.value = response;
 }
 
 // Watcher sur dateRange - recharge automatiquement quand ça change
-watch(() => dateRange.value, () => {
-  currentPage.value = 1;
-  loadPurchases();
-}, { deep: true });
+watch(
+  () => dateRange.value,
+  () => {
+    currentPage.value = 1;
+    loadPurchases();
+  },
+  { deep: true },
+);
 
-watch(() => selectedCategory.value, () => {
-  currentPage.value = 1;
-  loadPurchases();
-});
+watch(
+  () => selectedCategory.value,
+  () => {
+    currentPage.value = 1;
+    loadPurchases();
+  },
+);
 
 function handleEdit(item: PurchaseItem) {
   console.log("Edit", item);

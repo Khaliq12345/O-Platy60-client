@@ -1,34 +1,3 @@
-<script setup lang="ts">
-import type { Transformation } from "~/types/transformation";
-
-const props = defineProps<{
-  purchaseId: string;
-  transformations: Transformation[]
-}>()
-
-// Tri par date décroissante (plus récente en premier)
-const sortedTransformations = computed(() => {
-  return [...props.transformations].sort((a, b) => 
-    new Date(b.transformation_date).getTime() - new Date(a.transformation_date).getTime()
-  )
-})
-
-// Format date court
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short',
-    year: '2-digit'
-  })
-}
-
-// Calcul du taux de déchet
-const getWasteRate = (t: Transformation) => {
-  if (!t.quantity_received) return 0
-  return Math.round((t.waste_quantity / t.quantity_received) * 100)
-}
-</script>
-
 <template>
   <UCard>
     <template #header>
@@ -36,8 +5,8 @@ const getWasteRate = (t: Transformation) => {
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
           Transformations
         </h3>
-        <UBadge 
-          :color="transformations.length > 0 ? 'primary' : 'neutral'" 
+        <UBadge
+          :color="transformations.length > 0 ? 'primary' : 'neutral'"
           variant="soft"
           size="sm"
         >
@@ -50,7 +19,10 @@ const getWasteRate = (t: Transformation) => {
     <div v-if="transformations.length === 0" class="text-center py-8">
       <div class="flex flex-col items-center gap-3">
         <div class="p-3 bg-gray-100 dark:bg-gray-800 rounded-full">
-          <UIcon name="i-heroicons-cube-transparent" class="w-6 h-6 text-gray-400" />
+          <UIcon
+            name="i-heroicons-cube-transparent"
+            class="w-6 h-6 text-gray-400"
+          />
         </div>
         <p class="text-sm text-gray-500 dark:text-gray-400">
           Aucune transformation enregistrée
@@ -61,7 +33,7 @@ const getWasteRate = (t: Transformation) => {
     <!-- Liste des transformations -->
     <div v-else class="space-y-3">
       <div
-        v-for="transformation in sortedTransformations" 
+        v-for="transformation in sortedTransformations"
         :key="transformation.id"
         class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
       >
@@ -101,14 +73,24 @@ const getWasteRate = (t: Transformation) => {
           </div>
           <div class="bg-white dark:bg-gray-900 rounded px-2 py-1.5">
             <p class="text-xs text-gray-500">Déchet</p>
-            <p class="font-semibold text-sm" :class="transformation.waste_quantity > 0 ? 'text-orange-600' : 'text-gray-400'">
+            <p
+              class="font-semibold text-sm"
+              :class="
+                transformation.waste_quantity > 0
+                  ? 'text-orange-600'
+                  : 'text-gray-400'
+              "
+            >
               {{ transformation.waste_quantity }}
             </p>
           </div>
         </div>
 
         <!-- Indicateur de perte si significatif -->
-        <div v-if="getWasteRate(transformation) > 5" class="mt-2 flex items-center gap-1.5 text-xs text-orange-600">
+        <div
+          v-if="getWasteRate(transformation) > 5"
+          class="mt-2 flex items-center gap-1.5 text-xs text-orange-600"
+        >
           <UIcon name="i-heroicons-exclamation-triangle" class="w-3.5 h-3.5" />
           <span>{{ getWasteRate(transformation) }}% de perte</span>
         </div>
@@ -128,3 +110,36 @@ const getWasteRate = (t: Transformation) => {
     </template>
   </UCard>
 </template>
+
+<script setup lang="ts">
+import type { Transformation } from "~/types/transformation";
+
+const props = defineProps<{
+  purchaseId: string;
+  transformations: Transformation[];
+}>();
+
+// Tri par date décroissante (plus récente en premier)
+const sortedTransformations = computed(() => {
+  return [...props.transformations].sort(
+    (a, b) =>
+      new Date(b.transformation_date).getTime() -
+      new Date(a.transformation_date).getTime(),
+  );
+});
+
+// Format date court
+const formatDate = (date: string) => {
+  return new Date(date).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "2-digit",
+  });
+};
+
+// Calcul du taux de déchet
+const getWasteRate = (t: Transformation) => {
+  if (!t.quantity_received) return 0;
+  return Math.round((t.waste_quantity / t.quantity_received) * 100);
+};
+</script>
