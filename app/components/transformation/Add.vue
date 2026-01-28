@@ -1,270 +1,158 @@
 <script setup lang="ts">
 import { z } from "zod";
-import type { FormSubmitEvent } from "@nuxt/ui";
-import { CalendarDate, today, getLocalTimeZone } from "@internationalized/date";
+import type { PurchaseSummary } from "~/types/purchase";
+import type { FormSubmitEvent } from "#ui/types";
 
 const props = defineProps<{
-  purchaseId?: string;
+  purchase: PurchaseSummary;
 }>();
 
-const emit = defineEmits<{
-  submit: [data: any];
-  cancel: [];
-}>();
-
-const { get, post } = useApi();
+const { post } = useApi();
 const toast = useToast();
-
+const router = useRouter();
 
 const schema = z.object({
-  purchase_id: z
-    .string()
-    .min(1, "Veuillez choisir un achat"),
+  product_name: z.string().min(1, "Nom requis"),
 
-  product_name: z
-    .string()
-    .min(2, "Le nom du produit est requis"),
+  quantity_received: z.coerce
+    .number()
+    .min(0.01, "Minimum 0.01")
+    .max(
+      props.purchase?.remaining_quantity,
+      `Max: ${props.purchase?.remaining_quantity}`,
+    ),
 
-  quantity_received: z
-    .coerce
-    .number({ invalid_type_error: "La quantité reçue est requise" })
-    .min(0.1, "La quantité reçue doit être > 0"),
+  quantity_usable: z.coerce.number().min(0, "Minimum 0"),
 
-  quantity_usable: z
-    .coerce
-    .number({ invalid_type_error: "La quantité utilisable est requise" })
-    .min(0.1, "La quantité utilisable doit être > 0"),
+  transformation_date: z.string().min(1, "Date requise"),
 
-  waste_quantity: z
-    .coerce
-    .number({ invalid_type_error: "La quantité de déchets doit être un nombre" })
-    .min(0, "La quantité de déchets ne peut pas être négative"),
-
-  transformation_date: z
-    .instanceof(CalendarDate, { message: "Date requise" }),
-
-  notes: z
-    .string()
-    .optional(),
-
-  created_by: z
-    .string()
-    .min(1, "Le créateur est requis"),
+  notes: z.string().optional(),
 });
 
+const refinedSchema = schema.refine(
+  (data) => data.quantity_usable <= data.quantity_received,
+  {
+    message: "Utilisable ne peut pas dépasser Reçu",
+    path: ["quantity_usable"],
+  },
+);
 
-type Schema = z.output<typeof schema>;
-
-// État
-const loading = ref(false);
-const datePickerOpen = ref(false);
-const inputDate = useTemplateRef("inputDate");
+type Schema = z.infer<typeof schema>;
 
 const state = reactive<Partial<Schema>>({
-  purchase_id: props.purchaseId || undefined,
-  product_name: undefined,
+  product_name: "", // Vide pour forcer la saisie
   quantity_received: undefined,
   quantity_usable: undefined,
-  waste_quantity: undefined,
-  transformation_date: today(getLocalTimeZone()),
-  notes: undefined,
-  created_by: "current_user",
+  transformation_date: new Date().toISOString().split("T")[0],
+  notes: "",
 });
 
-// Données
-const availablePurchases = ref<any[]>([]);
-const selectedPurchase = ref<any>();
-
-// Calculs
-const wastePercent = computed(() => {
-  if (!state.quantity_received || state.waste_quantity === undefined) return 0;
-  return state.quantity_received > 0
-    ? Math.round((state.waste_quantity / state.quantity_received) * 100)
-    : 0;
+const wasteQuantity = computed(() => {
+  const received = Number(state.quantity_received) || 0;
+  const usable = Number(state.quantity_usable) || 0;
+  return Math.max(0, Number((received - usable).toFixed(2)));
 });
 
-// Watch pour la sélection d'achat
 watch(
-  () => state.purchase_id,
-  (purchaseId) => {
-    const purchase = availablePurchases.value.find((p) => p.id === purchaseId);
-    if (purchase) {
-      selectedPurchase.value = purchase;
-      state.product_name = purchase.item_name;
-      state.quantity_received = purchase.quantity;
-      state.quantity_usable = purchase.quantity;
-      state.waste_quantity = 0;
-    }
-  },
-);
-
-// Watch pour la quantité utilisable
-watch(
-  () => state.quantity_usable,
+  () => state.quantity_received,
   (newVal) => {
-    if (state.quantity_received !== undefined && newVal !== undefined) {
-      state.waste_quantity = Math.max(0, state.quantity_received - newVal);
+    if (state.quantity_usable && newVal && state.quantity_usable > newVal) {
+      state.quantity_usable = newVal;
     }
   },
 );
 
-async function loadPurchases() {
-  loading.value = true;
+const onSubmit = async (event: FormSubmitEvent<Schema>) => {
   try {
-    const purchases = await get<any[]>("/purchases");
-    availablePurchases.value = purchases || [];
-  } catch {
-    toast.add({
-      title: "Erreur",
-      description: "Impossible de charger les achats",
-      color: "error",
-    });
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function onSubmit(event: FormSubmitEvent<Schema>) {
-  try {
-    const data = {
+    const payload = {
       ...event.data,
-      transformation_date: event.data.transformation_date.toString(),
-      waste_percent: wastePercent.value,
+      purchase_id: props.purchase?.id,
+      waste_quantity: wasteQuantity.value,
+      created_by: "42ad2622-23a6-4fce-91fd-4c1996bb2902", // to change
     };
 
-    await post("/transformations", data);
+    await post("/transformations", payload);
 
     toast.add({
       title: "Succès",
-      description: "Transformation créée avec succès",
+      description: "Transformation créée",
       color: "success",
+      icon: "i-heroicons-check-circle",
     });
 
-    emit("submit", data);
-  } catch {
+    router.push(`/purchases/${props.purchase?.id}`);
+  } catch (error: any) {
     toast.add({
       title: "Erreur",
-      description: "Impossible de créer la transformation",
+      description:
+        error?.response?._data?.message || "Erreur lors de la création",
       color: "error",
+      icon: "i-heroicons-x-circle",
     });
   }
-}
-
-function onCancel() {
-  emit("cancel");
-}
-
-onMounted(loadPurchases);
+};
 </script>
 
 <template>
-  <div class="md:max-w-3/4 mx-auto px-4 py-8">
-    <UButton
-      to="/purchases"
-      variant="ghost"
-      color="neutral"
-      icon="i-heroicons-arrow-left"
-      class="mb-4"
+  <UCard class="max-w-4xl mx-auto ">
+    <template #header>
+      <div class="flex items-center gap-2 mt-1 text-sm text-gray-500">
+        <span>Stock disponible:</span>
+        <UBadge color="success" size="sm">
+          {{ purchase?.remaining_quantity }} {{ purchase?.unit }}
+        </UBadge>
+      </div>
+    </template>
+
+    <UForm
+      :schema="refinedSchema"
+      :state="state"
+      class="space-y-6"
+      @submit="onSubmit"
     >
-      Retour
-    </UButton>
+      <!-- Infos de base -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <UFormField label="Nom du produit" name="product_name" required>
+          <UInput
+            v-model="state.product_name"
+            placeholder="Ex: Tomates concassées, Frites..."
+            icon="i-heroicons-cube"
+          />
+        </UFormField>
 
-    <h1 class="text-xl md:text-3xl font-bold text-gray-900 dark:text-white mb-8">
-      Nouvelle Transformation
-    </h1>
+        <UFormField
+          label="Date de transformation"
+          name="transformation_date"
+          required
+        >
+          <UInput
+            v-model="state.transformation_date"
+            type="date"
+            class="w-full"
+          />
+        </UFormField>
+      </div>
 
-    <UCard class="shadow-sm">
-      <UForm
-        :schema="schema"
-        :state="state"
-        class="space-y-8"
-        @submit="onSubmit"
-      >
-        <!-- Étape 1: Informations Initiales -->
-        <div class="space-y-6">
-          <!-- Sélection de l'Achat -->
-          <UFormField label="Sélection de l'Achat" name="purchase_id" required>
-            <USelect
-              v-model="state.purchase_id"
-              :items="
-                availablePurchases.map((p) => ({
-                  label: `${p.item_name} - ${p.quantity} ${p.unit} - Acheté le ${new Date(p.purchase_date).toLocaleDateString('fr-FR')}`,
-                  value: p.id,
-                }))
-              "
-              :loading="loading"
-              placeholder="Choisir un achat"
-              class="w-full"
-            />
-          </UFormField>
+      <!-- Quantités -->
+      <div class="space-y-4">
+        <h3 class="font-semibold text-gray-900 dark:text-white border-b pb-2">
+          Quantités
+        </h3>
 
-          <!-- Stock disponible -->
-          <div
-            v-if="selectedPurchase"
-            class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
-          >
-            <p class="text-blue-800 dark:text-blue-200">
-              <span class="font-medium">Stock disponible:</span>
-              {{ selectedPurchase.quantity }} {{ selectedPurchase.unit }}
-            </p>
-          </div>
-
-          <!-- Informations de Base -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <UFormField label="Nom du produit" name="product_name" required>
-              <UInput
-                v-model="state.product_name"
-                placeholder="Nom du produit transformé"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              label="Date de transformation"
-              name="transformation_date"
-              required
-            >
-              <UPopover v-model:open="datePickerOpen">
-                <UButton
-                  color="neutral"
-                  variant="outline"
-                  class="w-full justify-between"
-                  :label="
-                    state.transformation_date
-                      ? new Date(state.transformation_date).toLocaleDateString(
-                          'fr-FR',
-                        )
-                      : 'JJ/MM/AAAA'
-                  "
-                  trailing-icon="i-heroicons-calendar-days"
-                />
-
-                <template #content>
-                  <UCalendar
-                    v-model="state.transformation_date"
-                    class="p-2"
-                    @update:model-value="datePickerOpen = false"
-                  />
-                </template>
-              </UPopover>
-            </UFormField>
-          </div>
-        </div>
-
-        <!-- Étape 2: Quantités Initiales -->
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <UFormField label="Quantité Reçue" name="quantity_received" required>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Quantité Reçue avec Max sur la même ligne -->
+          <UFormField name="quantity_received" label="Quantité Reçue" required>
             <UInput
-              v-model="state.quantity_received"
+              v-model.number="state.quantity_received"
               type="number"
-              disabled
+              step="0.01"
+              min="0"
+              :max="purchase?.remaining_quantity"
+              placeholder="0"
               class="w-full"
             >
               <template #trailing>
-                <span class="text-gray-500 text-sm">{{
-                  selectedPurchase?.unit || "kg"
-                }}</span>
+                <span class="text-gray-500 text-sm">{{ purchase?.unit }}</span>
               </template>
             </UInput>
           </UFormField>
@@ -275,58 +163,95 @@ onMounted(loadPurchases);
             required
           >
             <UInput
-              v-model="state.quantity_usable"
+              v-model.number="state.quantity_usable"
               type="number"
-              step="0.1"
+              step="0.01"
               min="0"
-              class="w-full"
+              placeholder="0"
             >
               <template #trailing>
-                <span class="text-gray-500 text-sm">{{
-                  selectedPurchase?.unit || "kg"
-                }}</span>
+                <span class="text-gray-500 text-sm">{{ purchase?.unit }}</span>
               </template>
             </UInput>
           </UFormField>
 
-          <UFormField label="Déchets Initiaux" name="waste_quantity">
-            <div class="relative">
-              <UInput
-                :model-value="state.waste_quantity || 0"
-                disabled
-                class="w-full pr-16"
-              />
-              <span
-                class="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500"
-              >
-                {{ wastePercent }}%
-              </span>
-            </div>
+          <UFormField label="Déchets">
+            <UInput :model-value="wasteQuantity" disabled class="bg-gray-50">
+              <template #trailing>
+                <span class="text-gray-500 text-sm">{{ purchase?.unit }}</span>
+              </template>
+            </UInput>
+            <template #hint>
+              <span class="text-xs text-gray-500">Calculé auto.</span>
+            </template>
           </UFormField>
         </div>
 
-        <!-- Étape 3: Notes -->
-        <UFormField label="Notes" name="notes">
-          <UTextarea
-            v-model="state.notes"
-            placeholder="Ajouter des détails supplémentaires..."
-            :rows="4"
-            class="w-full"
-          />
-        </UFormField>
-
-        <!-- Actions -->
-        <div class="flex justify-end gap-3 pt-6">
-          <UButton
-            type="button"
-            color="neutral"
-            variant="outline"
-            label="Annuler"
-            @click="onCancel"
-          />
-          <UButton type="submit" color="primary" label="Créer la Section" />
+        <!-- Barre visuelle -->
+        <div
+          v-if="state.quantity_received"
+          class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg"
+        >
+          <div
+            class="text-xs text-gray-600 dark:text-gray-400 mb-2 flex justify-between"
+          >
+            <span>Répartition:</span>
+            <span class="font-medium text-gray-900 dark:text-white">
+              {{ state.quantity_received }} total
+            </span>
+          </div>
+          <UProgress
+            v-if="state.quantity_received > 0"
+            :model-value="
+              ((state.quantity_usable || 0) / state.quantity_received) * 100
+            "
+            color="success"
+            size="sm"
+          >
+            <template #indicator>
+              <div class="text-xs text-white font-medium px-2">
+                {{
+                  Math.round(
+                    ((state.quantity_usable || 0) / state.quantity_received) *
+                      100,
+                  )
+                }}%
+              </div>
+            </template>
+          </UProgress>
+          <div class="flex justify-between text-xs mt-1 text-gray-500">
+            <span class="text-green-600"
+              >{{ state.quantity_usable || 0 }} utilisable</span
+            >
+            <span class="text-orange-600">{{ wasteQuantity }} déchet</span>
+          </div>
         </div>
-      </UForm>
-    </UCard>
-  </div>
+      </div>
+
+      <!-- Notes -->
+      <UFormField label="Notes" name="notes">
+        <UTextarea
+          v-model="state.notes"
+          :rows="3"
+          placeholder="Commentaires sur la transformation..."
+          class="w-full"
+        />
+      </UFormField>
+
+      <!-- Actions - sans trait/bordure au dessus -->
+      <div class="flex justify-end gap-3 pt-4">
+        <UButton
+          type="button"
+          variant="soft"
+          color="neutral"
+          @click="router.back()"
+        >
+          Annuler
+        </UButton>
+        <UButton type="submit" color="primary" icon="i-heroicons-check-circle">
+          Créer
+        </UButton>
+      </div>
+    </UForm>
+  </UCard>
 </template>

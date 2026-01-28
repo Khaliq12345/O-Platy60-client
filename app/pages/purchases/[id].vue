@@ -1,50 +1,53 @@
 <script setup lang="ts">
-import type { PurchaseDetail } from "~/types/purchase";
-
+import type { PurchaseSummary } from "~/types/purchase";
+import type { Transformation } from "~/types/transformation";
 const route = useRoute();
-const router = useRouter();
 const { get, delete: del } = useApi();
 
 const purchaseId = computed(() => route.params.id as string);
-const purchase = ref<PurchaseDetail | null>(null);
+const purchase = ref<PurchaseSummary | null>(null);
 const loading = ref(true);
+const transformations = ref<Transformation[]>([])
+const toast = useToast()
 
 async function loadPurchase() {
+  if (!purchaseId.value) return
+  loading.value = true
+  transformations.value = [] // Reset
+  
   try {
-    loading.value = true;
-    purchase.value = await get<PurchaseDetail>(
-      `/purchases/${purchaseId.value}`,
-    );
-  } catch (error) {
-    console.error("Erreur chargement achat:", error);
+    // 1. Chargement de l'achat d'abord
+    purchase.value = await get<PurchaseSummary>(
+      `/purchases/${purchaseId.value}/summary`
+    )
+    
+    // 2. Puis chargement des transformations
+    if (purchase.value?.id) {
+      transformations.value = await get<Transformation[]>(
+        '/transformations',
+        {
+          purchase_id: purchaseId.value
+        }
+      ) || []
+    }
+    
+  } catch (error: any) {
+    console.error("Erreur chargement:", error)
+    
+    toast.add({
+      title: 'error',
+      description: error?.data?.message || 'Erreur lors du chargement des données',
+      color: 'error',
+      icon: 'i-heroicons-exclamation-circle'
+    })
+    
+    purchase.value = null
+    transformations.value = []
+    
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
-
-function handleEdit() {
-  router.push(`/purchases/${purchaseId.value}/edit`);
-}
-
-async function handleDelete() {
-  if (!confirm("Êtes-vous sûr de vouloir supprimer cet achat ?")) return;
-
-  try {
-    await del(`/purchases/${purchaseId.value}`);
-    router.push("/purchases");
-  } catch (error) {
-    console.error("Erreur suppression:", error);
-  }
-}
-
-function handleBack() {
-  router.push("/purchases");
-}
-
-function handleCreateSection() {
-  router.push(`/purchases/${purchaseId.value}/transformation/new`);
-}
-
 onMounted(loadPurchase);
 </script>
 
@@ -63,16 +66,13 @@ onMounted(loadPurchase);
     <template v-else-if="purchase">
       <PurchaseDetailHeader
         :item-name="purchase.item_name"
-        @edit="handleEdit"
-        @delete="handleDelete"
-        @back="handleBack"
       />
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <PurchaseDetailInfo :purchase="purchase" />
+        <PurchaseDetailInfo :purchase="purchase" :transformations="transformations"/>
         <PurchaseDetailTransformation
-          :is-transformed="purchase.is_transformed"
-          @create-section="handleCreateSection"
+          :purchase-id="purchaseId"
+          :transformations="transformations"
         />
       </div>
     </template>

@@ -20,11 +20,8 @@ export interface CreatePurchaseInput {
   notes: string
 }
 
-export interface PurchaseDetail extends PurchaseItem {
-  category_name: string
-  created_by_name: string
-  used_quantity: number
+export interface PurchaseSummary extends PurchaseItem {
+  total_received_quantity: number
+  total_used_quantity: number
   remaining_quantity: number
-  is_transformed: boolean
-  notes?: string
 }
