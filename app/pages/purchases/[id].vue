@@ -1,6 +1,6 @@
 <template>
   <div class="w-full md:p-6 p-2 overflow-scroll">
-    <PurchaseDetailHeader :item-name="itemName"></PurchaseDetailHeader>
+    <PurchaseDetailHeader :item-name="itemName" :purchase-id="purchaseId"></PurchaseDetailHeader>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
       <PurchaseDetailInfo
         :purchase-id="purchaseId"
