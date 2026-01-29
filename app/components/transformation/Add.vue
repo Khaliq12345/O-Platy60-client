@@ -1,12 +1,12 @@
 <template>
   <UCard class="max-w-4xl mx-auto">
     <template #header>
-      <div class="flex items-center gap-2 mt-1 text-sm text-gray-500">
-        <span>Stock disponible:</span>
-        <UBadge color="success" size="sm">
-          {{ purchase?.remaining_quantity }} {{ purchase?.unit }}
-        </UBadge>
-      </div>
+      <MetricsWithBadge
+        title="Stock disponible"
+        :value="remainingQuantity"
+        badge-value="kg"
+        color="green"
+      />
     </template>
 
     <UForm
@@ -24,18 +24,6 @@
             icon="i-heroicons-cube"
           />
         </UFormField>
-
-        <UFormField
-          label="Date de transformation"
-          name="transformation_date"
-          required
-        >
-          <UInput
-            v-model="state.transformation_date"
-            type="date"
-            class="w-full"
-          />
-        </UFormField>
       </div>
 
       <!-- Quantités -->
@@ -47,49 +35,41 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <!-- Quantité Reçue avec Max sur la même ligne -->
           <UFormField name="quantity_received" label="Quantité Reçue" required>
-            <UInput
-              v-model.number="state.quantity_received"
-              type="number"
-              step="0.01"
-              min="0"
+            <UInputNumber
+              v-model="state.quantity_received"
+              :step="0.01"
+              :min="0"
               :max="purchase?.remaining_quantity"
-              placeholder="0"
+              placeholder="Mettre la Quantité Reçue"
               class="w-full"
+              :format-options="weightFormat(purchase.unit)"
             >
-              <template #trailing>
-                <span class="text-gray-500 text-sm">{{ purchase?.unit }}</span>
-              </template>
-            </UInput>
+            </UInputNumber>
           </UFormField>
 
+          <!-- // Quantité a utiliser -->
           <UFormField
             label="Quantité Utilisable"
             name="quantity_usable"
+            help="Calculé auto."
             required
           >
-            <UInput
-              v-model.number="state.quantity_usable"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0"
+            <UInputNumber
+              v-model="state.quantity_usable"
+              :format-options="weightFormat(purchase.unit)"
             >
-              <template #trailing>
-                <span class="text-gray-500 text-sm">{{ purchase?.unit }}</span>
-              </template>
-            </UInput>
+            </UInputNumber>
           </UFormField>
 
-          <UFormField label="Déchets">
-            <UInput :model-value="wasteQuantity" disabled class="bg-gray-50">
-              <template #trailing>
-                <span class="text-gray-500 text-sm">{{ purchase?.unit }}</span>
-              </template>
-            </UInput>
-            <template #hint>
-              <span class="text-xs text-gray-500">Calculé auto.</span>
-            </template>
-          </UFormField>
+          <!-- // Dechets initial -->
+          <!-- <UFormField label="Déchets">
+            <UInputNumber
+              :model-value="wasteQuantity"
+              class="bg-gray-50"
+              :format-options="weightFormat(purchase.unit)"
+            >
+            </UInputNumber>
+          </UFormField> -->
         </div>
 
         <!-- Barre visuelle -->
@@ -124,12 +104,6 @@
               </div>
             </template>
           </UProgress>
-          <div class="flex justify-between text-xs mt-1 text-gray-500">
-            <span class="text-green-600"
-              >{{ state.quantity_usable || 0 }} utilisable</span
-            >
-            <span class="text-orange-600">{{ wasteQuantity }} déchet</span>
-          </div>
         </div>
       </div>
 
@@ -163,11 +137,11 @@
 
 <script setup lang="ts">
 import { z } from "zod";
-import type { PurchaseSummary } from "~/types/purchase";
+import type { PurchaseItem } from "~/types/purchase";
 import type { FormSubmitEvent } from "#ui/types";
 
 const props = defineProps<{
-  purchase: PurchaseSummary;
+  purchase: PurchaseItem;
 }>();
 
 const { post } = useApi();
@@ -180,25 +154,34 @@ const schema = z.object({
   quantity_received: z.coerce
     .number()
     .min(0.01, "Minimum 0.01")
-    .max(
-      props.purchase?.remaining_quantity,
-      `Max: ${props.purchase?.remaining_quantity}`,
-    ),
+    .max(100, `Max: 100`),
 
   quantity_usable: z.coerce.number().min(0, "Minimum 0"),
-
   transformation_date: z.string().min(1, "Date requise"),
-
   notes: z.string().optional(),
 });
 
-const refinedSchema = schema.refine(
-  (data) => data.quantity_usable <= data.quantity_received,
-  {
-    message: "Utilisable ne peut pas dépasser Reçu",
-    path: ["quantity_usable"],
-  },
-);
+const refinedSchema = schema.superRefine((data, ctx) => {
+  // Check 2: Received vs Purchase Inventory
+  console.log("RECU ", data.quantity_received, props.purchase.quantity);
+  if (data.quantity_received > remainingQuantity.value) {
+    console.log("PARSING ", 1);
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `La quantité reçue (${data.quantity_received}) dépasse le stock disponible (${props.purchase.quantity})`,
+      path: ["quantity_received"],
+    });
+  }
+});
+
+// Calcule la quantite qui reste
+const remainingQuantity = computed(() => {
+  console.log("QUANTITY", props.purchase.quantity);
+  if (!props.purchase?.transformations) return props.purchase.quantity;
+  if (props.purchase.transformations[0]?.remaining_quantity == 0)
+    return props.purchase.quantity;
+  return props.purchase.transformations[0]?.remaining_quantity;
+});
 
 type Schema = z.infer<typeof schema>;
 
@@ -210,20 +193,24 @@ const state = reactive<Partial<Schema>>({
   notes: "",
 });
 
-const wasteQuantity = computed(() => {
-  const received = Number(state.quantity_received) || 0;
-  const usable = Number(state.quantity_usable) || 0;
-  return Math.max(0, Number((received - usable).toFixed(2)));
-});
+const unitMapping: Record<string, string> = {
+  kg: "kilogram",
+  g: "gram",
+  l: "liter",
+  ml: "milliliter",
+  m: "meter",
+  cm: "centimeter",
+};
 
-watch(
-  () => state.quantity_received,
-  (newVal) => {
-    if (state.quantity_usable && newVal && state.quantity_usable > newVal) {
-      state.quantity_usable = newVal;
-    }
-  },
-);
+const weightFormat = (unit: string) => {
+  const officialUnit = unitMapping[unit] || "kilogram";
+
+  return {
+    style: "unit",
+    unit: officialUnit,
+    unitDisplay: "short",
+  };
+};
 
 const onSubmit = async (event: FormSubmitEvent<Schema>) => {
   try {
