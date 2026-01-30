@@ -1,3 +1,5 @@
+import { Transformation } from "./transformation";
+
 export interface PurchaseItem {
   id: string;
   item_name: string;
@@ -9,19 +11,21 @@ export interface PurchaseItem {
   category_id: string;
   notes: string;
   created_by: string;
+  transformations: Transformation[];
 }
+
 export interface CreatePurchaseInput {
-  item_name: string
-  quantity: number
-  unit: string
-  price_per_unit: number
-  purchase_date: string
-  category_id: string
-  notes: string
+  item_name: string;
+  quantity: number;
+  unit: string;
+  price_per_unit: number;
+  purchase_date: string;
+  category_id: string;
+  notes: string;
 }
 
 export interface PurchaseSummary extends PurchaseItem {
-  total_received_quantity: number
-  total_used_quantity: number
-  remaining_quantity: number
+  total_received_quantity: number;
+  total_used_quantity: number;
+  remaining_quantity: number;
 }

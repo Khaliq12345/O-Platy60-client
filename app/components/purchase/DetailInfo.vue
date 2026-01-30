@@ -1,84 +1,34 @@
-<script setup lang="ts">
-import type { PurchaseSummary } from "~/types/purchase";
-import type { Transformation } from "~/types/transformation";
-
-const props = defineProps<{
-  purchase: PurchaseSummary;
-  transformations: Transformation[];
-}>();
-
-// Computed pour les statistiques
-const usedPercentage = computed(() => {
-  return Math.round(
-    (props.purchase.total_used_quantity / props.purchase.quantity) * 100,
-  );
-});
-
-const remainingPercentage = computed(() => {
-  return Math.round(
-    (props.purchase.remaining_quantity / props.purchase.quantity) * 100,
-  );
-});
-
-// Couleur dynamique selon le stock restant
-const stockColor = computed(() => {
-  if (remainingPercentage.value < 10) return "error";
-  if (remainingPercentage.value < 30) return "warning";
-  return "success";
-});
-
-// Formatage date avec VueUse (ou native)
-const formattedDate = computed(() => {
-  return new Date(props.purchase.purchase_date).toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-});
-</script>
-
 <template>
   <UCard class="h-full">
     <template #header>
-      <div class="flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-          Détails de l'achat
-        </h2>
-        <UBadge :color="stockColor" variant="subtle" size="md">
+      <SectionHeader title="Détails de l'achat">
+        <UBadge :color="stockColor" variant="subtle" size="sm">
           {{ remainingPercentage }}% disponible
         </UBadge>
-      </div>
+      </SectionHeader>
     </template>
 
-    <div class="space-y-6">
+    <!-- // Show this when data is loading -->
+    <div v-if="loading" class="space-y-4">
+      <LoadingSkeleton />
+    </div>
+
+    <!-- // Show this if there's no purchase -->
+    <div v-else-if="!purchase" class="py-6">
+      <UEmpty icon="i-lucide-circle-minus" title="Achats non trouvee" />
+    </div>
+
+    <!-- // Show this is there's purchase -->
+    <div v-else class="space-y-6">
       <!-- Grille d'infos principales -->
-      <div class="grid grid-cols-3 gap-4">
-        <div class="space-y-1">
-          <p class="text-sm text-gray-500 dark:text-gray-400">Quantité</p>
-          <div class="flex items-baseline gap-2">
-            <span class="text-2xl font-bold text-gray-900 dark:text-white">
-              {{ purchase.quantity }}
-            </span>
-            <UBadge color="neutral" variant="soft" size="sm">
-              {{ purchase.unit }}
-            </UBadge>
-          </div>
-        </div>
-
-        <div class="space-y-1">
-          <p class="text-sm text-gray-500 dark:text-gray-400">Prix Unitaire</p>
-          <p class="text-2xl font-bold text-gray-900 dark:text-white">
-            {{ purchase.price_per_unit.toLocaleString("fr-FR") }}
-            <span class="text-sm font-normal text-gray-500">FCFA</span>
-          </p>
-        </div>
-
-        <div class="space-y-1">
-          <p class="text-sm text-gray-500 dark:text-gray-400">Prix Total</p>
-          <p class="text-2xl font-bold text-primary-600 dark:text-primary-400">
-            {{ purchase.total_price.toLocaleString("fr-FR") }}
-            <span class="text-sm font-normal text-gray-500">FCFA</span>
-          </p>
+      <div class="grid grid-cols-3 gap-4 flex-row">
+        <div v-for="metric in purchaseMetrics">
+          <MetricsWithBadge
+            :title="metric.title"
+            :value="metric.value.toString()"
+            :badgeValue="metric.badgeValue"
+            :color="metric.color"
+          ></MetricsWithBadge>
         </div>
       </div>
 
@@ -86,35 +36,14 @@ const formattedDate = computed(() => {
 
       <!-- Métadonnées -->
       <div class="grid grid-cols-2 gap-4">
-        <div class="flex items-center gap-3">
-          <div class="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
-            <UIcon
-              name="i-heroicons-calendar-days"
-              class="w-5 h-5 text-gray-600 dark:text-gray-400"
-            />
-          </div>
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Date d'achat</p>
-            <p class="font-medium text-gray-900 dark:text-white">
-              {{ formattedDate }}
-            </p>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <div class="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
-            <UIcon
-              name="i-heroicons-user"
-              class="w-5 h-5 text-gray-600 dark:text-gray-400"
-            />
-          </div>
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Créé par</p>
-            <p class="font-medium text-gray-900 dark:text-white">
-              {{ purchase.created_by || "Non attribué" }}
-            </p>
-          </div>
-        </div>
+        <MetricsWithIcon
+          v-for="(item, index) in metadataItems"
+          :key="index"
+          :title="item.title"
+          :value="item.value"
+          :icon="item.icon"
+          direction="vertical"
+        />
       </div>
 
       <!-- Statut du Stock avec Progress -->
@@ -136,68 +65,159 @@ const formattedDate = computed(() => {
           size="lg"
         />
 
-        <div class="grid grid-cols-2 gap-4 text-sm">
-          <div
-            class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
-          >
-            <span
-              class="text-gray-600 dark:text-gray-400 flex items-center gap-2"
-            >
-              <UIcon
-                name="i-heroicons-arrow-down-circle"
-                class="w-4 h-4 text-amber-500"
-              />
-              Utilisé
-            </span>
-            <span class="font-semibold text-gray-900 dark:text-white">
-              {{ purchase.total_used_quantity }} {{ purchase.unit }}
-            </span>
-          </div>
-
-          <div
-            class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
-          >
-            <span
-              class="text-gray-600 dark:text-gray-400 flex items-center gap-2"
-            >
-              <UIcon
-                name="i-heroicons-archive-box"
-                class="w-4 h-4"
-                :class="`text-${stockColor}-500`"
-              />
-              Restant
-            </span>
-            <span
-              class="font-semibold"
-              :class="`text-${stockColor}-600 dark:text-${stockColor}-400`"
-            >
-              {{ purchase.remaining_quantity }} {{ purchase.unit }}
-            </span>
-          </div>
+        <div class="grid grid-cols-2 gap-4">
+          <MetricsWithIcon
+            v-for="metric in inventoryMetrics"
+            :key="metric.title"
+            :title="metric.title"
+            :value="metric.value"
+            :icon="metric.icon"
+            direction="horizontal"
+          />
         </div>
       </div>
-
-      <!-- Notes -->
-      <UAlert
-        v-if="purchase.notes"
-        icon="i-heroicons-chat-bubble-left-ellipsis"
-        :title="purchase.notes"
-        color="neutral"
-        variant="soft"
-        class="mt-4"
-      />
-
-      <div
-        v-else
-        class="text-center py-6 text-gray-400 text-sm border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-lg"
-      >
-        Aucune note disponible
-      </div>
     </div>
-
-    <!-- Slot pour actions (optionnel) -->
-    <template #footer v-if="$slots.footer">
-      <slot name="footer" />
-    </template>
   </UCard>
 </template>
+
+<script setup lang="ts">
+import type { PurchaseItem } from "~/types/purchase";
+import MetricsWithBadge from "../MetricsWithBadge.vue";
+
+const props = defineProps<{
+  purchaseId: string;
+  quantityReceived?: number;
+  quantityUsed?: number;
+  quantityRemaining?: number;
+}>();
+const itemName = defineModel();
+
+const purchase = ref<PurchaseItem>();
+
+// initialise the requests instance
+const { get, delete: del } = useApi();
+
+// variables to store data
+const loading = ref<boolean>(true);
+const toast = useToast();
+
+// Computed pour les statistiques
+const usedPercentage = computed(() => {
+  // Use ?? 0 to handle undefined/null safely
+  const total = props.quantityReceived ?? 0;
+  const used = props.quantityUsed ?? 0;
+
+  if (total === 0) return 0;
+
+  return Math.round((used / total) * 100);
+});
+
+const remainingPercentage = computed(() => {
+  const total = props.quantityReceived ?? 0;
+  const remaining = props.quantityRemaining ?? 0;
+
+  if (total === 0) return 0;
+
+  return Math.round((remaining / total) * 100);
+});
+
+// Couleur dynamique selon le stock restant
+const stockColor = computed(() => {
+  if (remainingPercentage.value < 10) return "error";
+  if (remainingPercentage.value < 30) return "warning";
+  return "success";
+});
+
+// Formatage date avec VueUse (ou native)
+const formattedDate = computed(() => {
+  return new Date(purchase.value?.purchase_date).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+});
+
+const inventoryMetrics = computed(() => [
+  {
+    title: "Utilisé",
+    value: `${props.quantityUsed || 0} ${purchase.value?.unit}`,
+    icon: "i-heroicons-arrow-down-circle",
+    color: "text-orange-500", // Optional: add flavor to your JSON
+  },
+  {
+    title: "Restant",
+    value: `${props.quantityRemaining || 0} ${purchase.value?.unit}`,
+    icon: "i-heroicons-archive-box",
+    color: "text-green-500",
+  },
+]);
+
+const metadataItems = computed(() => [
+  {
+    title: "Date d'achat",
+    value: formattedDate.value,
+    icon: "i-heroicons-calendar-days",
+  },
+  // {
+  //   title: "Créé par",
+  //   value: purchase.value?.created_by,
+  //   icon: "i-heroicons-user",
+  // },
+]);
+
+const purchaseMetrics = computed(() => {
+  const p = purchase.value;
+  return [
+    {
+      title: "Quantité",
+      value: p?.quantity?.toString() || "0",
+      badgeValue: p?.unit || "kg",
+      direction: "horizontal", // Style 1
+      icon: "i-heroicons-scale",
+      color: "gray",
+    },
+    {
+      title: "Prix Unitaire",
+      value: p?.price_per_unit?.toLocaleString("fr-FR") || "0",
+      badgeValue: "FCFA",
+      direction: "horizontal",
+      icon: "i-heroicons-tag",
+      color: "gray",
+    },
+    {
+      title: "Prix Total",
+      value: p?.total_price?.toLocaleString("fr-FR") || "0",
+      badgeValue: "FCFA",
+      color: "red",
+      direction: "horizontal",
+      icon: "i-heroicons-banknotes",
+    },
+  ];
+});
+
+async function loadPurchase() {
+  loading.value = true;
+  try {
+    // 1. Chargement de l'achat d'abord
+    purchase.value = await get<PurchaseItem>(`/purchases/${props.purchaseId}`);
+
+    itemName.value = purchase.value?.item_name;
+  } catch (error: any) {
+    console.error("Erreur chargement:", error);
+
+    toast.add({
+      title: "error",
+      description:
+        error?.data?.message || "Erreur lors du chargement des données",
+      color: "error",
+      icon: "i-heroicons-exclamation-circle",
+    });
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(async () => {
+  await loadPurchase();
+});
+</script>

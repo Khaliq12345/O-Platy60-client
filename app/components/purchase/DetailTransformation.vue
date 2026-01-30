@@ -1,130 +1,152 @@
+<template>
+  <UCard>
+    <!-- // The title of the section -->
+    <template #header>
+      <div class="flex items-center justify-between">
+        <SectionHeader title="Transformation" />
+      </div>
+    </template>
+
+    <!-- // Show this when data is loading -->
+    <div v-if="loading" class="space-y-4">
+      <LoadingSkeleton />
+    </div>
+
+    <!-- // Show this if there's no transformation -->
+    <div v-else-if="!transformation" class="py-6">
+      <UEmpty
+        icon="i-lucide-file"
+        title="Aucune transformation enregistrée"
+        description="Commencez par en créer une pour suivre l'évolution de vos produits"
+      >
+        <template #actions>
+          <UButton
+            icon="i-lucide-plus"
+            variant="subtle"
+            :to="`/transformations/add/${purchaseId}`"
+            >Commencez la transformation</UButton
+          >
+        </template>
+      </UEmpty>
+    </div>
+
+    <!-- // Show this is there's transformation -->
+    <div v-else class="space-y-3">
+      <div class="flex">
+        <UButton
+          :to="`/transformation/${transformation.id}`"
+          size="sm"
+          color="neutral"
+          variant="ghost"
+          icon="i-heroicons-eye"
+          label="Détails"
+        />
+      </div>
+
+      <!-- // Show the transformation metrics -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div
+          v-for="(metric, index) in transformationMetrics"
+          :key="index"
+          class="bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 rounded-xl p-4 transition-all hover:shadow-sm"
+        >
+          <MetricsWithBadge
+            :title="metric.title"
+            :value="metric.value"
+            :badge-value="metric.badgeValue"
+            :color="metric.color"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- // Button to add new transformation -->
+    <template #footer v-if="!transformation && !loading">
+      <UModal
+        title="Nouvelle Étape"
+        description="Ajouter une étape de transformation"
+      >
+        <UButton
+          color="primary"
+          variant="outline"
+          block
+          icon="i-heroicons-plus"
+          label="Nouvelle transformation"
+        />
+        <template #content>
+          <TransformationStepAdd :transformation="transformation" />
+        </template>
+      </UModal>
+    </template>
+  </UCard>
+</template>
+
 <script setup lang="ts">
 import type { Transformation } from "~/types/transformation";
 
 const props = defineProps<{
   purchaseId: string;
-  transformations: Transformation[]
-}>()
+}>();
+const quantityReceived = defineModel("quantityReceived");
+const quantityUsed = defineModel("quantityUsed");
+const quantityRemaining = defineModel("quantityRemaining");
 
-// Tri par date décroissante (plus récente en premier)
-const sortedTransformations = computed(() => {
-  return [...props.transformations].sort((a, b) => 
-    new Date(b.transformation_date).getTime() - new Date(a.transformation_date).getTime()
-  )
-})
+//variables to store the transformation
+const transformation = ref<Transformation | undefined>();
+const transformationMetrics = computed(() => {
+  // Shortcut to the value for cleaner code
+  const t = transformation.value;
 
-// Format date court
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short',
-    year: '2-digit'
-  })
-}
+  return [
+    {
+      title: "Reçu",
+      value: t?.quantity_received?.toLocaleString(),
+      badgeValue: t?.unit || "kg",
+      color: "gray",
+    },
+    {
+      title: "Utilisable",
+      value: t?.quantity_usable?.toLocaleString(),
+      badgeValue: t?.unit || "kg",
+      color: "green", // Keeping green from your HTML, or change to "gray" if preferred
+    },
+    {
+      title: "Déchet",
+      value: t?.waste_quantity?.toLocaleString(),
+      badgeValue: t?.unit || "kg",
+      color: (t?.waste_quantity ?? 0) > 0 ? "orange" : "gray",
+    },
+  ];
+});
+const loading = ref(true);
+
+// initialise the requests instance
+const { get, delete: del } = useApi();
 
 // Calcul du taux de déchet
 const getWasteRate = (t: Transformation) => {
-  if (!t.quantity_received) return 0
-  return Math.round((t.waste_quantity / t.quantity_received) * 100)
+  if (!t.quantity_received) return 0;
+  return Math.round((t.waste_quantity / t.quantity_received) * 100);
+};
+
+async function loadTransformation() {
+  // 1. Chargement des transformations
+  loading.value = true;
+  try {
+    transformation.value = await get<Transformation>(
+      `/transformations/purchase/${props.purchaseId}`,
+    );
+    quantityReceived.value = transformation.value.quantity_received;
+    quantityUsed.value = transformation.value.total_quantity_used;
+    quantityRemaining.value = transformation.value.remaining_quantity;
+  } catch (error) {
+    console.log(error);
+  } finally {
+    loading.value = false;
+  }
 }
+
+onMounted(async () => {
+  await loadTransformation();
+});
 </script>
-
-<template>
-  <UCard>
-    <template #header>
-      <div class="flex items-center justify-between">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-          Transformations
-        </h3>
-        <UBadge 
-          :color="transformations.length > 0 ? 'primary' : 'neutral'" 
-          variant="soft"
-          size="sm"
-        >
-          {{ transformations.length }}
-        </UBadge>
-      </div>
-    </template>
-
-    <!-- État vide -->
-    <div v-if="transformations.length === 0" class="text-center py-8">
-      <div class="flex flex-col items-center gap-3">
-        <div class="p-3 bg-gray-100 dark:bg-gray-800 rounded-full">
-          <UIcon name="i-heroicons-cube-transparent" class="w-6 h-6 text-gray-400" />
-        </div>
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-          Aucune transformation enregistrée
-        </p>
-      </div>
-    </div>
-
-    <!-- Liste des transformations -->
-    <div v-else class="space-y-3">
-      <div
-        v-for="transformation in sortedTransformations" 
-        :key="transformation.id"
-        class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-      >
-        <!-- Ligne principale : Nom + Date -->
-        <div class="flex items-start justify-between mb-3">
-          <div>
-            <h4 class="font-medium text-gray-900 dark:text-white text-sm">
-              {{ transformation.product_name }}
-            </h4>
-            <p class="text-xs text-gray-500 mt-0.5">
-              {{ formatDate(transformation.transformation_date) }}
-            </p>
-          </div>
-          <UButton
-            :to="`/transformation/${transformation.id}`"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            icon="i-heroicons-eye"
-            label="Voir"
-          />
-        </div>
-
-        <!-- Quantités en grille -->
-        <div class="grid grid-cols-3 gap-2 text-center">
-          <div class="bg-white dark:bg-gray-900 rounded px-2 py-1.5">
-            <p class="text-xs text-gray-500">Reçu</p>
-            <p class="font-semibold text-sm text-gray-900 dark:text-white">
-              {{ transformation.quantity_received }}
-            </p>
-          </div>
-          <div class="bg-white dark:bg-gray-900 rounded px-2 py-1.5">
-            <p class="text-xs text-gray-500">Utilisable</p>
-            <p class="font-semibold text-sm text-green-600">
-              {{ transformation.quantity_usable }}
-            </p>
-          </div>
-          <div class="bg-white dark:bg-gray-900 rounded px-2 py-1.5">
-            <p class="text-xs text-gray-500">Déchet</p>
-            <p class="font-semibold text-sm" :class="transformation.waste_quantity > 0 ? 'text-orange-600' : 'text-gray-400'">
-              {{ transformation.waste_quantity }}
-            </p>
-          </div>
-        </div>
-
-        <!-- Indicateur de perte si significatif -->
-        <div v-if="getWasteRate(transformation) > 5" class="mt-2 flex items-center gap-1.5 text-xs text-orange-600">
-          <UIcon name="i-heroicons-exclamation-triangle" class="w-3.5 h-3.5" />
-          <span>{{ getWasteRate(transformation) }}% de perte</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Bouton d'action toujours visible -->
-    <template #footer>
-      <UButton
-        color="primary"
-        variant="outline"
-        block
-        icon="i-heroicons-plus"
-        label="Nouvelle transformation"
-        :to="`/transformation/add/${purchaseId}`"
-      />
-    </template>
-  </UCard>
-</template>
