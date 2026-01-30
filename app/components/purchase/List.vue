@@ -10,7 +10,12 @@
       />
     </div>
 
+    <div v-if="loading">
+      <LoadingSkeleton></LoadingSkeleton>
+    </div>
+
     <PurchaseListTable
+      v-else
       :purchases="filteredPurchases"
       :categories="categories"
       @edit="handleEdit"
@@ -57,9 +62,11 @@ const currentPage = ref(1);
 const itemsPerPage = ref(20);
 const totalPages = ref(1);
 
+// Category to share among all children
 provide("categories", categories);
 
 const totalItems = ref(0);
+const loading = ref(true);
 
 const filteredPurchases = computed(() => {
   if (!searchQuery.value.trim()) return purchases.value;
@@ -74,21 +81,28 @@ async function loadCategories() {
 }
 
 async function loadPurchases() {
-  const query: Record<string, any> = {
-    page: currentPage.value,
-    limit: itemsPerPage.value,
-  };
+  loading.value = true;
+  try {
+    const query: Record<string, any> = {
+      page: currentPage.value,
+      limit: itemsPerPage.value,
+    };
 
-  if (selectedCategory.value) {
-    query.category_id = selectedCategory.value;
+    if (selectedCategory.value) {
+      query.category_id = selectedCategory.value;
+    }
+
+    if (startDate.value) query.start_date = startDate.value;
+    if (endDate.value) query.end_date = endDate.value;
+
+    const response = await get<PurchaseItem[]>("/purchases", query);
+    console.log(response);
+    purchases.value = response;
+  } catch (error) {
+    console.log(error);
+  } finally {
+    loading.value = false;
   }
-
-  if (startDate.value) query.start_date = startDate.value;
-  if (endDate.value) query.end_date = endDate.value;
-
-  const response = await get<PurchaseItem[]>("/purchases", query);
-  console.log(response);
-  purchases.value = response;
 }
 
 // Watcher sur dateRange - recharge automatiquement quand ça change

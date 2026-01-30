@@ -1,5 +1,5 @@
 <template>
-  <UModal v-model:open="isOpen" description="Modifier l'achat">
+  <UModal v-model:open="isOpen" description="Modifier l'achat" title="Modifie">
     <UButton
       size="sm"
       color="neutral"
@@ -22,7 +22,7 @@
           <UFormField label="Nom de l'article" name="item_name" required>
             <UInput
               v-model="state.item_name"
-              placeholder="Rechercher ou créer un article..."
+              :placeholder="purchase?.item_name"
               class="w-full"
             />
           </UFormField>
@@ -32,7 +32,10 @@
             <USelect
               v-model="state.category_id"
               :items="categories"
-              placeholder="Sélectionner une catégorie"
+              :placeholder="
+                categories.find((cat) => cat.value === purchase?.category_id)
+                  ?.label
+              "
               class="w-full"
             />
           </UFormField>
@@ -43,21 +46,17 @@
               <UInputNumber
                 v-model="state.quantity"
                 :min="1"
-                placeholder="ex: 10"
+                :placeholder="`${purchase?.quantity}`"
                 class="w-full"
               />
             </UFormField>
 
-            <UFormField
-              label="Prix par unité (FCFA)"
-              name="price_per_unit"
-              required
-            >
+            <UFormField label="Prix par unité (FCFA)" name="price_per_unit">
               <UInputNumber
                 v-model="state.price_per_unit"
                 :step="0.01"
                 :min="0"
-                placeholder="ex: 2500"
+                :placeholder="`${purchase?.price_per_unit}`"
                 class="w-full"
               />
             </UFormField>
@@ -81,8 +80,16 @@
               variant="soft"
               label="Fermer"
               @click="isOpen = false"
+              :loading="loading"
+              :disabled="loading"
             />
-            <UButton type="submit" color="primary" label="Sauvegarder" />
+            <UButton
+              type="submit"
+              color="primary"
+              label="Sauvegarder"
+              :loading="loading"
+              :disabled="loading"
+            />
           </div>
         </UForm>
       </div>
@@ -96,17 +103,32 @@ import type { FormSubmitEvent } from "@nuxt/ui";
 import type { Category } from "~/types/category";
 import type { PurchaseItem } from "~/types/purchase";
 
+const props = defineProps<{
+  purchaseId: string;
+}>();
+
 const isOpen = ref(false);
 const purchase = ref<PurchaseItem>();
-const purchaseId = useRoute().params.id;
 const { get, put } = useApi();
 
 // Schéma Zod de validation
 const schema = z.object({
-  item_name: z.string("Nom de l'achat invalide").min(2, "Le nom doit contenir au moins 2 caractères"),
-  quantity: z.number("Quantité invalide").min(1, "La quantité doit être d'au moins 1"),
-  price_per_unit: z.number("Prix par unité invalide").min(0.01, "Le prix doit être supérieur à 0"),
-  category_id: z.string("Catégorie invalide").min(1, "La catégorie est requise"),
+  item_name: z
+    .string("Nom de l'achat invalide")
+    .min(2, "Le nom doit contenir au moins 2 caractères")
+    .optional(),
+  quantity: z
+    .number("Quantité invalide")
+    .min(1, "La quantité doit être d'au moins 1")
+    .optional(),
+  price_per_unit: z
+    .number("Prix par unité invalide")
+    .min(0.01, "Le prix doit être supérieur à 0")
+    .optional(),
+  category_id: z
+    .string("Catégorie invalide")
+    .min(1, "La catégorie est requise")
+    .optional(),
   notes: z.string().optional(),
 });
 
@@ -114,22 +136,24 @@ type Schema = z.output<typeof schema>;
 
 // État du formulaire
 const state = reactive<Partial<Schema>>({
-  item_name: "",
-  quantity: 0,
-  price_per_unit: 0,
-  category_id: "",
-  notes: "",
+  item_name: purchase.value?.item_name,
+  quantity: purchase.value?.quantity,
+  price_per_unit: purchase.value?.price_per_unit,
+  category_id: purchase.value?.category_id,
+  notes: purchase.value?.notes,
 });
 
 // Catégories dynamiques
 const categories = ref<{ label: string; value: string }[]>([]);
 
 const toast = useToast();
+const loading = ref(false);
 
 // Soumission du formulaire
 async function onSubmit(event: FormSubmitEvent<Schema>) {
+  loading.value = true;
   try {
-    await put(`/purchases/${purchaseId}`, event.data);
+    await put(`/purchases/${props.purchaseId}`, event.data);
     toast.add({
       title: "Succès",
       description: "L'achat a été modifié avec succès.",
@@ -143,27 +167,25 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       description: "Une erreur est survenue lors de la modification.",
       color: "error",
     });
+  } finally {
+    loading.value = false;
   }
 }
 
-// Watch pour mettre à jour le formulaire quand purchase est chargé
-watch(purchase, (newPurchase) => {
-  if (newPurchase) {
-    state.item_name = newPurchase.item_name;
-    state.quantity = newPurchase.quantity;
-    state.price_per_unit = newPurchase.price_per_unit;
-    state.category_id = newPurchase.category_id;
-    state.notes = newPurchase.notes || "";
-  }
-}, { immediate: true })
-
 // Charger les catégories + l'achat
 onMounted(async () => {
-  const response = await get<Category[]>("/categories");
-  categories.value = response.map((cat) => ({
-    label: cat.name,
-    value: cat.id,
-  }));
-  purchase.value = await get<PurchaseItem>(`/purchases/${purchaseId}`);
+  loading.value = true;
+  try {
+    const response = await get<Category[]>("/categories");
+    categories.value = response.map((cat) => ({
+      label: cat.name,
+      value: cat.id,
+    }));
+    purchase.value = await get<PurchaseItem>(`/purchases/${props.purchaseId}`);
+  } catch (error) {
+    console.log(error);
+  } finally {
+    loading.value = false;
+  }
 });
 </script>

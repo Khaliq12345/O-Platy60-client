@@ -1,5 +1,5 @@
 <template>
-  <UCard class="mb-6">
+  <div class="mb-6">
     <!-- Mobile -->
     <div class="items-center gap-3 md:hidden flex">
       <UInput
@@ -9,10 +9,15 @@
         icon="i-heroicons-magnifying-glass"
         class="flex-1"
       />
-      
-      <UDrawer direction="bottom" inset title="Filtres" description="Affinez votre recherche">
+
+      <UDrawer
+        direction="bottom"
+        inset
+        title="Filtres"
+        description="Affinez votre recherche"
+      >
         <UButton icon="i-lucide-filter" color="neutral" variant="ghost" />
-        
+
         <template #content>
           <PurchaseFilterForm
             v-model:search-query="search"
@@ -33,18 +38,21 @@
         @export="emit('export')"
       />
     </div>
-  </UCard>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { CalendarDate } from "@internationalized/date";
 
 // V-MODELS - Définition des types explicites
-const search = defineModel<string>('search', { default: '' });
-const category = defineModel<string | undefined>('category');
-const dateRange = defineModel<{ start: CalendarDate; end: CalendarDate }>('dateRange', {
-  required: true
-});
+const search = defineModel<string>("search", { default: "" });
+const category = defineModel<string | undefined>("category");
+const dateRange = defineModel<{ start: CalendarDate; end: CalendarDate }>(
+  "dateRange",
+  {
+    required: true,
+  },
+);
 
 const emit = defineEmits<{
   export: [];

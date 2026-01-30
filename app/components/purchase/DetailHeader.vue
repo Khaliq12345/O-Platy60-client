@@ -10,15 +10,8 @@
     </div>
 
     <div class="flex gap-3">
-      <PurchaseEdit />
-      <UButton
-        size="sm"
-        color="error"
-        variant="outline"
-        icon="i-heroicons-trash"
-        label="Supprimer"
-        @click="handleDelete"
-      />
+      <PurchaseEdit :purchase-id="purchaseId" />
+      <PurchaseDelete :item-name="itemName" :purchase-id="purchaseId" />
     </div>
   </div>
 </template>
@@ -28,30 +21,4 @@ const props = defineProps<{
   itemName: string;
   purchaseId: string;
 }>();
-
-const { delete: del } = useApi();
-const toast = useToast();
-
-
-async function handleDelete() {
-  try {
-    await del(`/purchases/${props.purchaseId}`)
-    toast.add({
-      title: 'Achat supprimé',
-      description: "L'achat a été supprimé avec succès",
-      color: 'success'
-    })
-
-    useRouter().push('/purchases')  
-  } catch (error) {
-    console.error('Error deleting purchase:', error)
-    
-    toast.add({
-      title: 'Erreur',
-      description: "Une erreur est survenue lors de la suppression de l'achat",
-      color: 'error'
-    })
-  }
-}
-
 </script>

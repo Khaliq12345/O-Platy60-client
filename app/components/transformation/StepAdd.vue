@@ -38,7 +38,13 @@
       </div>
 
       <div class="flex gap-3 pt-4">
-        <UButton type="submit" color="primary" icon="i-heroicons-check-circle">
+        <UButton
+          type="submit"
+          color="primary"
+          icon="i-heroicons-check-circle"
+          :loading="loading"
+          :disable="loading"
+        >
           Ajouter l'étape
         </UButton>
       </div>
@@ -74,9 +80,22 @@ const schema = z
       .min(0.01, "Minimum 0.01")
       .positive("Doit être positif"),
   })
-  .refine((data) => data.quantity <= props.transformation.remaining_quantity, {
-    message: `Stock insuffisant (disponible: ${props.transformation.remaining_quantity} ${props.transformation.unit})`,
-    path: ["quantity"],
+  .superRefine((data, ctx) => {
+    if (data.quantity <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "La quantité doit être supérieure à 0",
+        path: ["quantity"],
+      });
+    }
+
+    if (data.quantity > props.transformation.remaining_quantity) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Stock insuffisant (${props.transformation.remaining_quantity} restants)`,
+        path: ["quantity"],
+      });
+    }
   });
 
 type Schema = z.infer<typeof schema>;
@@ -87,7 +106,10 @@ const state = reactive<Partial<Schema>>({
   quantity: undefined,
 });
 
+const loading = ref(false);
+
 const onSubmit = async (event: FormSubmitEvent<Schema>) => {
+  loading.value = true;
   try {
     const payload = {
       ...event.data,
@@ -112,6 +134,8 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       color: "error",
       icon: "i-heroicons-x-circle",
     });
+  } finally {
+    loading.value = false;
   }
 };
 </script>

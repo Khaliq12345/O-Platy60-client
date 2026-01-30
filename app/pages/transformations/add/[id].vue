@@ -2,11 +2,14 @@
   <div class="mx-auto container py-4 overflow-x-auto w-full">
     <div class="w-full">
       <UPageHeader>
+        <BackButton></BackButton>
         <template #title>
-          Transformation sur
-          <span class="text-primary-600 dark:text-primary-400">
-            {{ purchase?.item_name }}
-          </span>
+          <div class="text-xl md:text-2xl">
+            Transformation sur
+            <span class="text-primary-600 dark:text-primary-400">
+              {{ purchase?.item_name }}
+            </span>
+          </div>
         </template>
       </UPageHeader>
 

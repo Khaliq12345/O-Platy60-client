@@ -1,7 +1,6 @@
 <template>
   <UCard class="max-w-4xl mx-auto">
     <template #header>
-
       <MetricsWithBadge
         title="Stock disponible"
         :value="purchase?.quantity.toString() || '0'"
@@ -10,21 +9,7 @@
       />
     </template>
 
-    <UForm
-      :schema="schema"
-      :state="state"
-      class="space-y-6"
-      @submit="onSubmit"
-    >
-      <!-- Infos de base -->
-      <UFormField label="Nom du produit" name="product_name" required>
-        <UInput
-          v-model="state.product_name"
-          placeholder="Ex: Tomates concassées, Frites..."
-          icon="i-heroicons-cube"
-        />
-      </UFormField>
-
+    <UForm :schema="schema" :state="state" class="space-y-6" @submit="onSubmit">
       <!-- Quantités -->
       <div class="space-y-4">
         <h3 class="font-semibold text-gray-900 dark:text-white border-b pb-2">
@@ -73,35 +58,6 @@
             />
           </UFormField>
         </div>
-
-        <!-- Barre visuelle -->
-        <div
-          v-if="state.quantity_received"
-          class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg"
-        >
-          <div
-            class="text-xs text-gray-600 dark:text-gray-400 mb-2 flex justify-between"
-          >
-            <span>Répartition:</span>
-            <span class="font-medium text-gray-900 dark:text-white">
-            {{ usableQuantity || 0 }} / {{ state.quantity_received }} récu
-            </span>
-          </div>
-          <UProgress
-            v-if="state.quantity_received > 0"
-            :model-value="
-              ((usableQuantity || 0) / state.quantity_received) * 100
-            "
-            color="success"
-            size="sm"
-          >
-            <template #indicator>
-              <div class="text-xs text-white font-medium px-2">
-                {{ Math.round(((usableQuantity || 0) / state.quantity_received) * 100) }}%
-              </div>
-            </template>
-          </UProgress>
-        </div>
       </div>
 
       <!-- Notes -->
@@ -121,6 +77,8 @@
           variant="soft"
           color="neutral"
           @click="router.back()"
+          :loading="loading"
+          :disabled="loading"
         >
           Annuler
         </UButton>
@@ -128,7 +86,8 @@
           type="submit"
           color="primary"
           icon="i-heroicons-check-circle"
-          :disabled="!isValid || usableQuantity <= 0"
+          :loading="loading"
+          :disabled="loading"
         >
           Créer
         </UButton>
@@ -149,25 +108,18 @@ const props = defineProps<{
 const { post } = useApi();
 const toast = useToast();
 const router = useRouter();
+const loading = ref(false);
 
 const schema = z.object({
-  product_name: z.string().min(1, "Nom requis"),
-  
-  quantity_received: z.coerce.number()
-    .min(0.01, "Minimum 0.01")
-    .default(0),
-  
-  waste_quantity: z.coerce.number()
-    .min(0, "Minimum 0")
-    .default(0),
-  
-  quantity_usable: z.number()
-    .min(0)
-    .default(0),
-  
+  quantity_received: z.coerce.number().min(0.01, "Minimum 0.01").default(0),
+
+  waste_quantity: z.coerce.number().min(0, "Minimum 0").default(0),
+
+  quantity_usable: z.number().min(0).default(0),
+
   transformation_date: z.string().min(1, "Date requise"),
   notes: z.string().optional(),
-})
+});
 
 // Quantité utilisable calculée (Reçu - Déchets)
 const usableQuantity = computed(() => {
@@ -176,27 +128,14 @@ const usableQuantity = computed(() => {
   return Math.max(0, received - waste);
 });
 
-// Pourcentage utilisable pour la barre de progression
-const usablePercentage = computed(() => {
-  if (!state.quantity_received || state.quantity_received === 0) return 0;
-  return (usableQuantity.value / state.quantity_received) * 100;
-});
-
-// Validation globale
-const isValid = computed(() => {
-  const result = schema.safeParse(state);
-  return result.success && usableQuantity.value > 0 && state.waste_quantity > 0;
-});
-
 type Schema = z.infer<typeof schema>;
 
 // État initial
 const state = reactive<Partial<Schema>>({
-  product_name: "",
-  quantity_received: undefined,
+  quantity_received: props.purchase.quantity,
   waste_quantity: 0, // Initialisé à 0
-  quantity_usable: undefined, // Sera calculé
-  transformation_date: new Date().toISOString().split("T")[0],
+  quantity_usable: 0, // Sera calculé
+  transformation_date: new Date().toISOString(),
   notes: "",
 });
 
@@ -220,9 +159,10 @@ const weightFormat = (unit: string) => {
 };
 
 const onSubmit = async (event: FormSubmitEvent<Schema>) => {
+  loading.value = true;
   try {
     const payload = {
-      product_name: event.data.product_name,
+      product_name: props.purchase.item_name,
       quantity_received: event.data.quantity_received,
       quantity_usable: usableQuantity.value,
       waste_quantity: event.data.waste_quantity || 0,
@@ -251,11 +191,8 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       color: "error",
       icon: "i-heroicons-x-circle",
     });
+  } finally {
+    loading.value = false;
   }
 };
-// Simplification du schema, la quantité ne dépasse pas la quantité de l'achat utilisé partout
-// La quantité des déchets ne peut pas dépasser la quantité utilisable après
-// La quantité utilisable est calculée automatiquement par quantité reçue - quantité déchets
-// Utilisation de max dans les InputNumber pour éviter les valeurs débordantes
-// Date de transformation prise localement avec new Date()
 </script>

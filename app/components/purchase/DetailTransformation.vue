@@ -61,7 +61,7 @@
     </div>
 
     <!-- // Button to add new transformation -->
-    <template #footer v-if="!transformation && !loading">
+    <template #footer v-if="transformation">
       <UModal
         title="Nouvelle Étape"
         description="Ajouter une étape de transformation"
