@@ -140,13 +140,13 @@ const formattedDate = computed(() => {
 const inventoryMetrics = computed(() => [
   {
     title: "Utilisé",
-    value: `${props.quantityUsed} ${purchase.value?.unit}`,
+    value: `${props.quantityUsed || 0} ${purchase.value?.unit}`,
     icon: "i-heroicons-arrow-down-circle",
     color: "text-orange-500", // Optional: add flavor to your JSON
   },
   {
     title: "Restant",
-    value: `${props.quantityRemaining} ${purchase.value?.unit}`,
+    value: `${props.quantityRemaining || 0} ${purchase.value?.unit}`,
     icon: "i-heroicons-archive-box",
     color: "text-green-500",
   },
