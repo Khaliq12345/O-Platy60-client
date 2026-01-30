@@ -11,6 +11,7 @@
           v-model="state.step_name"
           placeholder="Ex: Poulet Grillé, Cuisses Sautées..."
           icon="i-heroicons-tag"
+          class="w-full"
         />
       </UFormField>
 
@@ -19,6 +20,7 @@
           <UInputNumber
             v-model="state.portions"
             placeholder="Entrer le nombre de portions"
+            class="w-full"
           >
           </UInputNumber>
         </UFormField>
@@ -32,22 +34,24 @@
           <UInputNumber
             v-model="state.quantity"
             placeholder="Entrer la quantité"
+            class="w-full"
           >
           </UInputNumber>
         </UFormField>
       </div>
 
-      <div class="flex gap-3 pt-4">
+      
         <UButton
           type="submit"
           color="primary"
           icon="i-heroicons-check-circle"
           :loading="loading"
           :disable="loading"
+          :class="loading ? 'animate-pulse' : ''"
         >
-          Ajouter l'étape
+          {{ loading ? 'Création...' : 'Ajouter l\'étape'}}
         </UButton>
-      </div>
+      
     </UForm>
   </UPageCard>
 </template>

@@ -1,9 +1,68 @@
+<template>
+  <UDashboardPanel>
+    <template #header>
+      <CustomDashboardNav title="Transformations">
+      </CustomDashboardNav>
+    </template>
+    <!-- Header connecté avec v-model -->
+    <template #body>
+
+      <TransformationListHeader
+      v-model:search-query="searchQuery"
+      v-model:date-start="dateStart"
+      class="mx-auto w-3/4"
+    />
+
+    <Loading v-if="loading" />
+
+    <div
+      v-else-if="filteredTransformations.length === 0"
+      class="text-center py-12"
+    >
+      <UIcon
+        name="i-heroicons-inbox"
+        class="w-12 h-12 text-gray-400 mx-auto mb-3"
+      />
+      <p class="text-gray-500 dark:text-gray-400">
+        Aucune transformation trouvée
+      </p>
+    </div>
+
+    <div v-else class="px-6 space-y-6 overflow-y-auto">
+      <TransformationList
+        v-for="transformation in paginatedTransformations"
+        :key="transformation.id"
+        :transformation="transformation"
+        class="mx-auto md:w-3/4"
+      />
+    </div>
+
+    <!-- Pagination NuxtUI -->
+    <div
+      v-if="!loading && filteredTransformations.length > itemsPerPage"
+      class="mt-6 flex justify-center"
+    >
+      <UPagination
+        v-model="currentPage"
+        :page-count="itemsPerPage"
+        :total="filteredTransformations.length"
+      />
+    </div>
+
+    <!-- Info pagination -->
+    <div
+      v-if="!loading && filteredTransformations.length > 0"
+      class="mt-6 text-center text-sm text-gray-500"
+    >
+      Page {{ currentPage }} sur {{ totalPages }} •
+      {{ filteredTransformations.length }} résultats
+    </div>
+  </template>
+  </UDashboardPanel>
+</template>
+
 <script setup lang="ts">
 import type { TransformationSummary } from "~/types/transformation";
-
-definePageMeta({
-  layout: "default",
-});
 
 const { get } = useApi();
 const toast = useToast();
@@ -74,66 +133,3 @@ onMounted(() => {
   loadTransformations();
 });
 </script>
-
-<template>
-  <div class="mx-auto px-4 py-6 overflow-scroll">
-    <!-- Header connecté avec v-model -->
-    <TransformationListHeader
-      v-model:search-query="searchQuery"
-      v-model:date-start="dateStart"
-    />
-
-    <!-- États -->
-    <div v-if="loading" class="space-y-4">
-      <UCard v-for="i in 3" :key="i">
-        <div class="space-y-4">
-          <USkeleton class="h-8 w-32" />
-          <USkeleton class="h-16 w-full" />
-          <USkeleton class="h-10 w-full" />
-        </div>
-      </UCard>
-    </div>
-
-    <div
-      v-else-if="filteredTransformations.length === 0"
-      class="text-center py-12"
-    >
-      <UIcon
-        name="i-heroicons-inbox"
-        class="w-12 h-12 text-gray-400 mx-auto mb-3"
-      />
-      <p class="text-gray-500 dark:text-gray-400">
-        Aucune transformation trouvée
-      </p>
-    </div>
-
-    <div v-else class="space-y-4">
-      <TransformationList
-        v-for="transformation in paginatedTransformations"
-        :key="transformation.id"
-        :transformation="transformation"
-      />
-    </div>
-
-    <!-- Pagination NuxtUI -->
-    <div
-      v-if="!loading && filteredTransformations.length > itemsPerPage"
-      class="mt-8 flex justify-center"
-    >
-      <UPagination
-        v-model="currentPage"
-        :page-count="itemsPerPage"
-        :total="filteredTransformations.length"
-      />
-    </div>
-
-    <!-- Info pagination -->
-    <div
-      v-if="!loading && filteredTransformations.length > 0"
-      class="mt-4 text-center text-sm text-gray-500"
-    >
-      Page {{ currentPage }} sur {{ totalPages }} •
-      {{ filteredTransformations.length }} résultats
-    </div>
-  </div>
-</template>

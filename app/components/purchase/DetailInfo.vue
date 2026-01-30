@@ -1,5 +1,5 @@
 <template>
-  <UCard class="h-full">
+  <UCard class="">
     <template #header>
       <SectionHeader title="Détails de l'achat">
         <UBadge :color="stockColor" variant="subtle" size="sm">
@@ -9,9 +9,8 @@
     </template>
 
     <!-- // Show this when data is loading -->
-    <div v-if="loading" class="space-y-4">
-      <LoadingSkeleton />
-    </div>
+
+    <Loading v-if="loading" />
 
     <!-- // Show this if there's no purchase -->
     <div v-else-if="!purchase" class="py-6">

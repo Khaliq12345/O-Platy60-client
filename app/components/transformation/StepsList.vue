@@ -1,35 +1,41 @@
 <script setup lang="ts">
-import type { TransformationStep } from '~/types/transformation'
+import type {
+  Transformation,
+  TransformationStep,
+} from "~/types/transformation";
 
 const props = defineProps<{
-  transformationId: string
-  unit?: string
-}>()
+  transformationId: string;
+  transformation: Transformation;
+  unit?: string;
+}>();
 
-const { get } = useApi()
-const toast = useToast()
+const { get } = useApi();
+const toast = useToast();
 
-const loading = ref(true)
-const steps = ref<TransformationStep[]>([])
+const loading = ref(true);
+const steps = ref<TransformationStep[]>([]);
 
 const loadSteps = async () => {
   try {
-    loading.value = true
-    steps.value = await get<TransformationStep[]>(`/transformation-steps/${props.transformationId}/`)
+    loading.value = true;
+    steps.value = await get<TransformationStep[]>(
+      `/transformation-steps/${props.transformationId}/`,
+    );
   } catch (error: any) {
     toast.add({
-      title: 'Erreur',
-      description: 'Impossible de charger les étapes',
-      color: 'error'
-    })
+      title: "Erreur",
+      description: "Impossible de charger les étapes",
+      color: "error",
+    });
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 onMounted(() => {
-  loadSteps()
-})
+  loadSteps();
+});
 </script>
 
 <template>
@@ -38,15 +44,19 @@ onMounted(() => {
       <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
         Transformations Effectuées
       </h3>
-      <UButton
-        color="primary"
-        icon="i-heroicons-plus"
-        :to="`/transformation-step/add/${transformationId}`"
+      <UModal
+        title="Nouvelle Étape"
+        description="Ajouter une étape de transformation"
       >
-      <span class="hidden md:inline ">
-        Ajouter une Transformation
-      </span>
-    </UButton>
+        <UButton
+          color="primary"
+          variant="outline"
+          icon="i-heroicons-plus"
+        />
+        <template #content>
+          <TransformationStepAdd :transformation="transformation" />
+        </template>
+      </UModal>
     </div>
 
     <!-- Loading -->
@@ -55,13 +65,17 @@ onMounted(() => {
     </div>
 
     <!-- Empty -->
-    <div 
-      v-else-if="steps.length === 0" 
+    <div
+      v-else-if="steps.length === 0"
       class="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
     >
-      <UIcon name="i-heroicons-clipboard-document-list" class="w-12 h-12 text-gray-400 mx-auto mb-3" />
-      <p class="text-gray-500 dark:text-gray-400">Aucune étape de transformation</p>
-      <p class="text-sm text-gray-400 mt-1">Commencez par ajouter une transformation</p>
+      <UIcon
+        name="i-heroicons-clipboard-document-list"
+        class="w-12 h-12 text-gray-400 mx-auto mb-3"
+      />
+      <p class="text-gray-500 dark:text-gray-400">
+        Aucune étape de transformation
+      </p>
     </div>
 
     <!-- Liste -->

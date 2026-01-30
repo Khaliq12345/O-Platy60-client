@@ -10,9 +10,7 @@
       />
     </div>
 
-    <div v-if="loading">
-      <LoadingSkeleton></LoadingSkeleton>
-    </div>
+    <Loading v-if="loading" /> 
 
     <PurchaseListTable
       v-else
