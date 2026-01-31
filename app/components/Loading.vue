@@ -1,5 +1,5 @@
 <template>
-  <div id="loader-container">
+  <div id="loader-container" class="flex items-center justify-center w-full h-full">
     <div id="floating-o" class="text-center">
       <p class="text-primary font-bold text-3xl">O-Platy</p>
       <p class="text-sm">Chargement</p>
@@ -8,13 +8,6 @@
 </template>
 
 <style scoped>
-#loader-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 50vh;
-  width: 100vw;
-}
 
 #floating-o {
   animation: float 3s ease-in-out infinite;

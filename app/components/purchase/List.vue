@@ -10,7 +10,7 @@
       />
     </div>
 
-    <Loading v-if="loading" /> 
+    <Loading v-if="loading" />
 
     <PurchaseListTable
       v-else

@@ -10,7 +10,7 @@
       <TransformationListHeader
       v-model:search-query="searchQuery"
       v-model:date-start="dateStart"
-      class="mx-auto w-3/4"
+      class="w-full mx-auto mb-2"
     />
 
     <Loading v-if="loading" />
@@ -28,12 +28,12 @@
       </p>
     </div>
 
-    <div v-else class="px-6 space-y-6 overflow-y-auto">
+    <div v-else class="px-2 space-y-6 overflow-y-auto">
       <TransformationList
         v-for="transformation in paginatedTransformations"
         :key="transformation.id"
         :transformation="transformation"
-        class="mx-auto md:w-3/4"
+        class="mx-auto w-full md:w-3/4"
       />
     </div>
 

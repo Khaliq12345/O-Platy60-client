@@ -38,8 +38,6 @@
             variant="soft"
             label="Fermer"
             @click="isOpen = false"
-            :loading="loading"
-            :disabled="loading"
           />
           <UButton
             type="submit"

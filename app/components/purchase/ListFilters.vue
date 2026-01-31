@@ -16,7 +16,7 @@
         title="Filtres"
         description="Affinez votre recherche"
       >
-        <UButton icon="i-lucide-filter" color="neutral" variant="ghost" />
+        <UButton icon="i-lucide-menu" color="neutral" variant="ghost" />
 
         <template #content>
           <PurchaseFilterForm

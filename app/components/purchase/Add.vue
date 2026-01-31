@@ -1,16 +1,146 @@
+<template>
+  <div>
+    <!-- Loading -->
+    <div v-if="loading" class="h-screen flex items-center justify-center">
+      <Loading />
+    <!-- Form -->
+    </div>
+    <div v-else-if="categories.length > 0" class="max-w-2xl mx-auto px-4 py-8">
+      <!-- Lien retour -->
+      <UButton
+        color="neutral"
+        variant="link"
+        icon="i-heroicons-arrow-left"
+        label="Retour"
+        class="mb-4 px-0"
+        @click="onCancel"
+      />
+
+      <!-- Titre -->
+      <h1 class="text-xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4">
+        Nouvel Achat
+      </h1>
+
+      <!-- Formulaire -->
+      <div>
+        <UForm
+          :schema="schema"
+          :state="state"
+          class="space-y-6"
+          @submit="onSubmit"
+        >
+          <!-- Nom de l'article -->
+          <UFormField label="Nom de l'article" name="item_name" required>
+            <UInput
+              v-model="state.item_name"
+              placeholder="Rechercher ou créer un article..."
+              class="w-full"
+            />
+          </UFormField>
+
+          <!-- Catégorie -->
+          <UFormField label="Catégorie" name="category_id" required>
+            <USelect
+              v-model="state.category_id"
+              :items="categories"
+              placeholder="Sélectionner une catégorie"
+              class="w-full"
+            />
+          </UFormField>
+
+          <!-- Quantité et Unité -->
+          <div class="grid grid-cols-2 gap-4">
+            <UFormField label="Quantité" name="quantity" required>
+              <UInputNumber
+                v-model="state.quantity"
+                :min="1"
+                placeholder="ex: 10"
+                class="w-full"
+              />
+            </UFormField>
+
+            <UFormField label="Unité" name="unit" required>
+              <USelect
+                v-model="state.unit"
+                :items="units"
+                placeholder="Sélectionner une unité"
+                class="w-full"
+              />
+            </UFormField>
+          </div>
+
+          <!-- Prix par unité -->
+          <UFormField
+            label="Prix par unité (FCFA)"
+            name="price_per_unit"
+            required
+          >
+            <UInputNumber
+              v-model="state.price_per_unit"
+              :step="0.01"
+              :min="0"
+              placeholder="ex: 2500"
+              class="w-full"
+            />
+          </UFormField>
+
+          <!-- Prix total (calculé) -->
+          <UFormField label="Prix Total" required>
+            <div
+              class="text-xl md:text-2xl font-bold text-primary-600 dark:text-primary-400"
+            >
+              {{ totalPrice.toLocaleString("fr-FR") }} FCFA
+            </div>
+          </UFormField>
+
+          <!-- Notes -->
+          <UFormField label="Notes" name="notes">
+            <UTextarea
+              v-model="state.notes"
+              placeholder="Ajouter des détails supplémentaires..."
+              :rows="4"
+              class="w-full"
+            />
+          </UFormField>
+
+          <!-- Boutons -->
+          <div class="flex justify-end gap-3 pt-4">
+            <UButton
+              type="button"
+              color="neutral"
+              variant="soft"
+              label="Annuler"
+              @click="onCancel"
+            />
+            <UButton type="submit" color="primary" label="Enregistrer" />
+          </div>
+        </UForm>
+      </div>
+    </div>
+    <!-- Empty -->
+    <div v-else>
+      <UEmpty icon="i-lucide-circle-minus" title="Impossible de charger les catérogies.">
+        <template #action>
+          <UButton
+                icon="i-lucide-arrow-up-right"
+                variant="subtle"
+                :to="`/purchases`"
+                >Rediriger vers achats</UButton
+              >
+        </template>
+      </UEmpty>
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { z } from "zod";
 import type { FormSubmitEvent } from "@nuxt/ui";
-import type { CreatePurchaseInput } from "~/types/purchase";
 import type { Category } from "~/types/category";
-import { CalendarDate, today, getLocalTimeZone } from "@internationalized/date";
-
-definePageMeta({
-  layout: "default",
-});
 
 const router = useRouter();
 const { get, post } = useApi();
+const loading = ref(true)
 
 // Schéma Zod de validation
 const schema = z.object({
@@ -18,7 +148,6 @@ const schema = z.object({
   quantity: z.number().min(1, "La quantité doit être d'au moins 1"),
   unit: z.string().min(1, "L'unité est requise"),
   price_per_unit: z.number().min(0.01, "Le prix doit être supérieur à 0"),
-  purchase_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date invalide"),
   category_id: z.string().min(1, "La catégorie est requise"),
   notes: z.string().optional(),
 });
@@ -31,20 +160,8 @@ const state = reactive<Partial<Schema>>({
   quantity: undefined,
   unit: undefined,
   price_per_unit: undefined,
-  purchase_date: new Date().toISOString().split("T")[0],
   category_id: "",
   notes: "",
-});
-
-// Date pour le calendrier popup
-const selectedDate = ref<CalendarDate>(today(getLocalTimeZone()));
-const isCalendarOpen = ref(false);
-
-// Sync date calendrier avec state
-watch(selectedDate, (newDate) => {
-  if (newDate) {
-    state.purchase_date = newDate.toString();
-  }
 });
 
 // Calcul du prix total
@@ -74,6 +191,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     const purchaseData = {
       ...event.data,
       total_price: totalPrice.value,
+      purchase_date: new Date().toISOString().split("T")[0],
       created_by: "42ad2622-23a6-4fce-91fd-4c1996bb2902",
     };
 
@@ -102,150 +220,20 @@ function onCancel() {
 
 // Charger les catégories
 onMounted(async () => {
-  const response = await get<Category[]>("/categories");
-  categories.value = response.map((cat) => ({
-    label: cat.name,
-    value: cat.id,
-  }));
+  try {
+    const response = await get<Category[]>("/categories");
+    categories.value = response.map((cat) => ({
+      label: cat.name,
+      value: cat.id,
+    }));
+  } catch(err) {
+    console.error("Erreur lors du chargement des catégories:", err);
+    toast.add({
+      title: "Erreur",
+      description: "Une erreur est survenue lors du chargement des catégories.",
+      color: "error",
+    });
+  }
+  loading.value = false;
 });
 </script>
-
-<template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-    <div class="max-w-2xl mx-auto px-4 py-8">
-      <!-- Lien retour -->
-      <UButton
-        color="neutral"
-        variant="link"
-        icon="i-heroicons-arrow-left"
-        label="Retour"
-        class="mb-4 px-0"
-        @click="onCancel"
-      />
-
-      <!-- Titre -->
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-8">
-        Nouvel Achat
-      </h1>
-
-      <!-- Formulaire -->
-      <UCard class="shadow-sm">
-        <UForm
-          :schema="schema"
-          :state="state"
-          class="space-y-6"
-          @submit="onSubmit"
-        >
-          <!-- Nom de l'article -->
-          <UFormField label="Nom de l'article" name="item_name" required>
-            <UInput
-              v-model="state.item_name"
-              placeholder="Rechercher ou créer un article..."
-              class="w-full"
-            />
-          </UFormField>
-
-          <!-- Catégorie -->
-          <UFormField label="Catégorie" name="category_id" required>
-            <USelect
-              v-model="state.category_id"
-              :items="categories"
-              placeholder="Sélectionner une catégorie"
-              class="w-full"
-            />
-          </UFormField>
-
-          <!-- Quantité et Unité -->
-          <div class="grid grid-cols-2 gap-4">
-            <UFormField label="Quantité" name="quantity" required>
-              <UInput
-                v-model="state.quantity"
-                type="number"
-                min="1"
-                placeholder="ex: 10"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField label="Unité" name="unit" required>
-              <USelect
-                v-model="state.unit"
-                :items="units"
-                placeholder="Sélectionner une unité"
-                class="w-full"
-              />
-            </UFormField>
-          </div>
-
-          <!-- Prix par unité -->
-          <UFormField
-            label="Prix par unité (FCFA)"
-            name="price_per_unit"
-            required
-          >
-            <UInput
-              v-model="state.price_per_unit"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="ex: 2500"
-              class="w-full"
-            />
-          </UFormField>
-
-          <!-- Prix total (calculé) -->
-          <UFormField label="Prix Total" required>
-            <div
-              class="text-2xl font-bold text-primary-600 dark:text-primary-400"
-            >
-              {{ totalPrice.toLocaleString("fr-FR") }} FCFA
-            </div>
-          </UFormField>
-
-          <!-- Date d'achat avec calendrier popup -->
-          <UFormField label="Date d'achat" name="purchase_date" required>
-            <UPopover v-model:open="isCalendarOpen">
-              <UButton
-                color="neutral"
-                variant="outline"
-                class="w-full justify-between font-normal"
-                :label="
-                  state.purchase_date
-                    ? new Date(state.purchase_date).toLocaleDateString('fr-FR')
-                    : 'JJ/MM/AAAA'
-                "
-                trailing-icon="i-heroicons-calendar-days"
-              />
-
-              <template #content>
-                <UCalendar v-model="selectedDate" class="p-2" />
-              </template>
-            </UPopover>
-          </UFormField>
-
-          <!-- Notes -->
-          <UFormField label="Notes" name="notes">
-            <UTextarea
-              v-model="state.notes"
-              placeholder="Ajouter des détails supplémentaires..."
-              :rows="4"
-              class="w-full"
-            />
-          </UFormField>
-
-          <!-- Boutons -->
-          <div class="flex justify-end gap-3 pt-4">
-            <UButton
-              type="button"
-              color="neutral"
-              variant="soft"
-              label="Annuler"
-              @click="onCancel"
-            />
-            <UButton type="submit" color="primary" label="Enregistrer" />
-          </div>
-        </UForm>
-      </UCard>
-    </div>
-  </div>
-</template>
