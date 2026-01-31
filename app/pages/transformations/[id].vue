@@ -1,23 +1,22 @@
 <template>
-  <div class="mx-auto">
-    <div class="flex flex-col">
-      
+  <div class="w-full">
       <!-- Loading -->
-      <div v-if="loading" class=" space-y-6 w-full mt-6">
+      <div v-if="loading" class="h-full w-full mt-6">
         <Loading />
       </div>
       
       <!-- Content -->
-      <div v-else-if="transformation && !loading" class="flex flex-col gap-4 mt-6">
+      <div v-else-if="transformation && !loading" class="w-full md:w-3/4 md:mx-auto px-4 flex flex-col items-center justify-between gap-4 mt-4">
 
         <!-- HEADER -->
         <TransformationDetailHeader
           :transformation="transformation"
           :unit="transformation?.unit"
+          class="w-full"
         />
 
         <!-- Liste des étapes -->
-        <div class="mb-auto">
+        <div class="mb-auto w-full">
           <TransformationStepsList
             :transformation-id="transformationId"
             :transformation="transformation"
@@ -27,7 +26,7 @@
 
         <!-- Footer résumé -->
         <TransformationSummaryFooter
-        class="justify-self-end"
+        class="justify-self-end w-full"
           :total-portions="transformation.total_portions || 0"
           :total-quantity="transformation.total_step_quantity || 0"
           :remaining-quantity="transformation.remaining_quantity || 0"
@@ -42,7 +41,6 @@
         title="Aucune transformation trouvée"
         description="Cette transformation n'existe pas ou a été supprimée."
       />
-    </div>
   </div>
 </template>
 

@@ -1,60 +1,60 @@
 <template>
-  <div class="mb-6">
-    <!-- Mobile -->
-    <div class="items-center gap-3 md:hidden flex">
-      <UInput
-        :model-value="search"
-        @update:model-value="search = $event"
-        placeholder="Rechercher un article..."
-        icon="i-heroicons-magnifying-glass"
-        class="flex-1"
+  <Filters @filter="handleFilter">
+    <template #filters>
+      <USelect 
+        v-model="selectedCategory" 
+        :items="categoryOptions" 
+        placeholder="Toutes catégories" 
+        class="w-full sm:w-48"
       />
-
-      <UDrawer
-        direction="bottom"
-        inset
-        title="Filtres"
-        description="Affinez votre recherche"
-      >
-        <UButton icon="i-lucide-filter" color="neutral" variant="ghost" />
-
-        <template #content>
-          <PurchaseFilterForm
-            v-model:search-query="search"
-            v-model:category="category"
-            v-model:date-range="dateRange"
-            @export="emit('export')"
-          />
-        </template>
-      </UDrawer>
-    </div>
-
-    <!-- Desktop -->
-    <div class="hidden md:block">
-      <PurchaseFilterForm
-        v-model:search-query="search"
-        v-model:category="category"
-        v-model:date-range="dateRange"
-        @export="emit('export')"
+    </template>
+    
+    <template #actions>
+      <UButton 
+        color="neutral" 
+        variant="outline" 
+        icon="i-heroicons-arrow-down-tray" 
+        @click="emit('export')" 
+        title="Exporter CSV"
       />
-    </div>
-  </div>
+    </template>
+    
+    <template #mobile-actions>
+      <UButton 
+        color="neutral" 
+        variant="ghost" 
+        icon="i-heroicons-arrow-down-tray" 
+        @click="emit('export')"
+      />
+    </template>
+  </Filters>
 </template>
 
 <script setup lang="ts">
-import { CalendarDate } from "@internationalized/date";
-
-// V-MODELS - Définition des types explicites
-const search = defineModel<string>("search", { default: "" });
-const category = defineModel<string | undefined>("category");
-const dateRange = defineModel<{ start: CalendarDate; end: CalendarDate }>(
-  "dateRange",
-  {
-    required: true,
-  },
-);
+import type { Category } from "~/types/category";
 
 const emit = defineEmits<{
+  filter: [data: { search: string; date: { start: any; end: any }; category?: string }];
   export: [];
 }>();
+
+// Injection des catégories (même logique que FilterForm.vue)
+const categories = inject<Ref<Category[]>>("categories", ref([]));
+
+// État local de la catégorie sélectionnée
+const selectedCategory = ref<string | undefined>(undefined);
+
+// Options du select
+const categoryOptions = computed(() => [
+  { label: "Toutes catégories", value: undefined },
+  ...categories.value.map((cat) => ({ label: cat.name, value: cat.id })),
+]);
+
+// Réception des filtres de base (search + date) et ajout de la catégorie
+const handleFilter = (filterData: { search: string; date: { start: any; end: any } }) => {
+  emit("filter", {
+    ...filterData,
+    category_id: selectedCategory.value || "",
+  });
+};
 </script>
