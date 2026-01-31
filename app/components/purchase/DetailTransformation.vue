@@ -8,9 +8,7 @@
     </template>
 
     <!-- // Show this when data is loading -->
-    <div v-if="loading" class="space-y-4">
-      <LoadingSkeleton />
-    </div>
+    <Loading v-if="loading" />
 
     <!-- // Show this if there's no transformation -->
     <div v-else-if="!transformation" class="py-6">
@@ -34,7 +32,7 @@
     <div v-else class="space-y-3">
       <div class="flex">
         <UButton
-          :to="`/transformation/${transformation.id}`"
+          :to="`/transformations/${transformation.id}`"
           size="sm"
           color="neutral"
           variant="ghost"

@@ -8,7 +8,7 @@
       size="sm"
       color="neutral"
       variant="outline"
-      icon="i-heroicons-pencil"
+      icon="i-heroicons-trash"
       label="Supprimer"
     />
 
@@ -19,13 +19,15 @@
         <!-- // Input for confirmer -->
         <UFormField
           label="Confirmer la suppression"
-          help="Ecris le nom du produit pour supprimer l'achat"
+          help="Tapez le nom du produit pour supprimer l'achat"
+          class="mt-2"
         >
           <UInput
             color="neutral"
             variant="subtle"
             :placeholder="itemName"
             v-model="confirmName"
+            class="w-full"
           />
         </UFormField>
         <!-- Boutons -->
@@ -42,11 +44,13 @@
           <UButton
             type="submit"
             color="primary"
-            label="Confirmer"
             @click="handleDelete"
             :loading="loading"
             :disabled="loading"
-          ></UButton>
+            :class="loading ? 'animate-pulse' : ''"
+          >
+          {{ loading ? 'Suppression...' : 'Supprimer'}}
+        </UButton>
         </div>
       </div>
     </template>

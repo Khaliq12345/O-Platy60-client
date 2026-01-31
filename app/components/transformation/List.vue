@@ -1,7 +1,7 @@
 <template>
-  <UCard class="overflow-hidden hover:shadow-lg transition-shadow">
+  <div class="p-2 rounded-md shadow hover:shadow-lg transition-shadow duration-300">
     <!-- Header primary -->
-    <div class="px-4 py-3 flex flex-row justify-around gap-3">
+    <div class="mt-2 px-2 flex items-center justify-between">
       <UBadge color="primary" variant="solid" class="rounded-full">
         {{ formatDate(transformation.transformation_date) }}
       </UBadge>
@@ -11,48 +11,41 @@
           :to="`/purchases/${transformation.purchase_id}`"
           class="underline hover:no-underline font-medium"
         >
-          Achat - {{ transformation.quantity_received }}kg
+          Achat - {{ transformation.quantity_received }}kg 
+          <!-- need to be transformation.unit instead of kg -->
         </NuxtLink>
       </span>
     </div>
 
-    <div class="p-4 space-y-4">
+    <div class="p-4 space-y-6">
       <!-- Titre et badge compteur -->
       <div class="flex flex-col md:flex-row items-center justify-between gap-2">
         <h3 class="text-xl font-bold text-gray-900 dark:text-white">
           {{ transformation.product_name }}
         </h3>
         <UBadge color="neutral" variant="soft" class="w-fit">
-          {{ steps.length }} transformations effectuées
+          {{ steps.length }} transformation{{ steps.length > 1 ? 's' : '' }}
         </UBadge>
       </div>
 
       <!-- Stats grid - Responsive -->
       <div
-        class="grid grid-cols-3 gap-0 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden divide-x divide-gray-200 dark:divide-gray-700"
+        class="text-sm md:grid md:grid-cols-3 border border-gray-200 dark:border-gray-700 rounded-md md:rounded-lg overflow-hidden md:divide-x divide-gray-200 dark:divide-gray-700"
       >
         <div
           v-for="(stat, index) in stats"
           :key="index"
-          class="p-2 sm:p-3 text-center bg-gray-50/50 dark:bg-gray-800/50 flex flex-col justify-center min-h-[60px] sm:min-h-[72px]"
+          class="p-2 text-center bg-gray-50/90 dark:bg-gray-800/50 flex items-center gap-2 md:gap-0 md:flex-col md:justify-center md:min-h-15"
         >
-          <p
-            class="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1 uppercase tracking-wider"
-          >
+          <p class="text-gray-500 uppercase tracking-wider">
             {{ stat.label }}:
           </p>
           <p
             class="text-sm lg:text-lg font-bold text-gray-900 dark:text-white leading-tight"
           >
             {{ stat.value }}
-            <span class="text-xs font-normal text-gray-500">{{
-              stat.unit
-            }}</span>
-            <span
-              v-if="stat.extra"
-              class="block text-[10px] sm:text-xs text-gray-500 font-normal mt-0.5"
-            >
-              / {{ stat.extra }}
+            <span class="text-xs font-normal text-gray-500">
+              {{ stat.unit }}
             </span>
           </p>
         </div>
@@ -86,7 +79,7 @@
         </div>
 
         <UButton
-          :to="`/transformation/${transformation.id}`"
+          :to="`/transformations/${transformation.id}`"
           color="primary"
           variant="solid"
           trailing-icon="i-heroicons-arrow-right"
@@ -96,7 +89,7 @@
         </UButton>
       </div>
     </div>
-  </UCard>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -149,7 +142,7 @@ const stats = computed(() => [
     extra: null,
   },
   {
-    label: "Déchets initiaux",
+    label: "Déchets",
     value: props.transformation.waste_quantity,
     unit: "kg",
     extra: `${Math.round((props.transformation.waste_quantity / props.transformation.quantity_received) * 100)}%`,

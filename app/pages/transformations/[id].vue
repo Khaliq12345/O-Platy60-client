@@ -1,13 +1,55 @@
+<template>
+  <div class="mx-auto">
+    <div class="flex flex-col">
+      
+      <!-- Loading -->
+      <div v-if="loading" class=" space-y-6 w-full mt-6">
+        <Loading />
+      </div>
+      
+      <!-- Content -->
+      <div v-else-if="transformation && !loading" class="flex flex-col gap-4 mt-6">
+
+        <!-- HEADER -->
+        <TransformationDetailHeader
+          :transformation="transformation"
+          :unit="transformation?.unit"
+        />
+
+        <!-- Liste des étapes -->
+        <div class="mb-auto">
+          <TransformationStepsList
+            :transformation-id="transformationId"
+            :transformation="transformation"
+            :unit="transformation?.unit"
+          />
+        </div>
+
+        <!-- Footer résumé -->
+        <TransformationSummaryFooter
+        class="justify-self-end"
+          :total-portions="transformation.total_portions || 0"
+          :total-quantity="transformation.total_step_quantity || 0"
+          :remaining-quantity="transformation.remaining_quantity || 0"
+          :unit="transformation?.unit"
+        />
+      </div>
+
+      <!-- Error -->
+      <UEmpty
+      v-else
+        icon="i-lucide-file"
+        title="Aucune transformation trouvée"
+        description="Cette transformation n'existe pas ou a été supprimée."
+      />
+    </div>
+  </div>
+</template>
 
 <script setup lang="ts">
 import type { TransformationSummary } from '~/types/transformation'
 
-definePageMeta({
-  layout: 'default'
-})
-
 const route = useRoute()
-const router = useRouter()
 const { get } = useApi()
 const toast = useToast()
 
@@ -19,80 +61,22 @@ const transformation = ref<TransformationSummary | null>(null)
 const unit = ref('kg')
 
 const loadTransformation = async () => {
+  loading.value = true
   try {
-    loading.value = true
     transformation.value = await get<TransformationSummary>(
-      `/transformations/${transformationId.value}/summary`
+      `/transformations/${transformationId.value}`
     )
   } catch (error: any) {
     toast.add({
       title: 'Erreur',
       description: 'Impossible de charger la transformation',
       color: 'error'
-    })
-    router.push('/purchases')
-  } finally {
-    loading.value = false
+    })        
   }
+  loading.value = false
 }
 
 onMounted(() => {
   loadTransformation()
 })
 </script>
-
-<template>
-  <div class="mx-auto px-2">
-    <div class="flex flex-col px-4 py-6 max-w-4xl">
-      
-      <!-- HEADER : Objet complet passé -->
-      <TransformationDetailHeader
-        :transformation="transformation"
-        :unit="unit"
-        :loading="loading"
-      />
-
-      <!-- Loading -->
-      <div v-if="loading" class="space-y-6 mt-6">
-        <USkeleton class="h-64 w-full" />
-        <USkeleton class="h-16 w-full" />
-      </div>
-
-      <!-- Content -->
-      <div v-else-if="transformation" class="space-y-6 mt-6">
-        
-        <!-- Liste des étapes -->
-        <TransformationStepsList
-          :transformation-id="transformationId"
-          :unit="unit"
-        />
-
-        <!-- Footer résumé -->
-        <TransformationSummaryFooter
-        class="justify-self-end"
-          :total-portions="transformation.total_portions"
-          :total-quantity="transformation.total_step_quantity"
-          :remaining-quantity="transformation.remaining_quantity"
-          :unit="unit"
-        />
-      </div>
-
-      <!-- Error -->
-      <UAlert
-        v-else
-        color="error"
-        variant="soft"
-        icon="i-heroicons-exclamation-triangle"
-        title="Transformation introuvable"
-        class="mt-6"
-      >
-        <template #actions>
-          <UButton to="/purchases" color="error" variant="solid" size="sm">
-            Retour aux achats
-          </UButton>
-        </template>
-      </UAlert>
-      
-    </div>
-  </div>
-</template>
