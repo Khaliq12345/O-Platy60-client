@@ -36,8 +36,16 @@
       </template>
     </UInputDate>
 
-    <UButton icon="i-heroicons-funnel" @click="sendFilter" />
-    
+    <UButton
+      icon="i-heroicons-funnel"
+      @click="
+        () => {
+          updateDate;
+          emit('filter');
+        }
+      "
+    />
+
     <!-- Slot actions - desktop only -->
     <slot name="actions" />
   </div>
@@ -57,7 +65,7 @@
       variant="outline"
       @click="isOpen = true"
     />
-    
+
     <slot name="mobile-actions" />
   </div>
 
@@ -69,7 +77,7 @@
           class="flex items-center justify-between pb-2 border-b border-gray-200 dark:border-gray-800"
         >
           <UButton
-          label="Filtres"
+            label="Filtres"
             color="neutral"
             variant="ghost"
             icon="i-lucide-menu"
@@ -110,7 +118,7 @@
             icon="i-heroicons-funnel"
             label="Appliquer"
             class="w-full"
-            @click="handleMobileFilter"
+            @click="emit('filter')"
           />
         </div>
       </div>
@@ -122,32 +130,25 @@
 import { CalendarDate, today, getLocalTimeZone } from "@internationalized/date";
 
 const emit = defineEmits<{
-  filter: [data: { search: string; date: { start: any; end: any } } & Record<string, any>];
+  filter: [];
 }>();
 
+const searchQuery = defineModel("searchQuery");
+const dateUpdated = defineModel("dateRange");
+
 const isOpen = ref(false);
-const searchQuery = ref("");
 const now = today(getLocalTimeZone());
+
+const inputDate = useTemplateRef("inputDate");
 const dateRange = shallowRef({
   start: new CalendarDate(now.year, 1, 1),
   end: now.add({ years: 1 }),
 });
-
-const inputDate = useTemplateRef("inputDate");
-
-const handleMobileFilter = () => {
-  sendFilter();
-  isOpen.value = false;
-};
-
-function sendFilter() {
-  emit("filter", {
-    search: searchQuery.value,
-    date: {
-      start: dateRange.value.start.toString(),
-      end: dateRange.value.end.toString(),
-    },
-  });
-}
-
+// Update daterange filter
+const updateDate = computed(() => {
+  dateUpdated.value = {
+    start: dateRange.value?.start.toString(),
+    end: dateRange.value?.end.toString(),
+  };
+});
 </script>

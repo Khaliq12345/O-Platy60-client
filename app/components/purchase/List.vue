@@ -2,7 +2,11 @@
   <div class="p-1 flex flex-col justify-between h-full lg:mx-auto">
     <div class="mb-2">
       <PurchaseListHeader />
-      <PurchaseListFilters @filter="handleFilter" @export="handleExport" />
+      <PurchaseListFilters
+        @purchasefilter="handleFilter"
+        @export="handleExport"
+        v-model:query="filterQuery"
+      />
     </div>
 
     <Loading v-if="loading" />
@@ -49,6 +53,7 @@ const query = ref({
   page: 1,
   limit: 20,
 });
+const filterQuery = ref();
 
 async function loadCategories() {
   categories.value = await get<Category[]>("/categories");
@@ -57,7 +62,7 @@ async function loadCategories() {
 async function loadPurchases() {
   loading.value = true;
   try {
-    const response = await get<PurchaseItem[]>("/purchases", query);
+    const response = await get<PurchaseItem[]>("/purchases", query.value);
     console.log(response);
     purchases.value = response;
   } catch (error) {
@@ -67,12 +72,9 @@ async function loadPurchases() {
   }
 }
 
-function handleFilter(filter: {
-  search: string;
-  date: { start: any; end: any };
-  category_id: string;
-}) {
-  query.value = filter;
+function handleFilter() {
+  query.value = { ...query.value, ...filterQuery.value };
+  console.log(filterQuery.value.date);
   loadPurchases();
 }
 
