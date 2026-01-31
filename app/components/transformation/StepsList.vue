@@ -41,7 +41,7 @@ onMounted(() => {
 <template>
   <div class="space-y-4">
     <div class="flex gap-4 items-center justify-between">
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+      <h3 class="text-md md:text-lg font-semibold text-gray-900 dark:text-white">
         Transformations Effectuées
       </h3>
       <UModal

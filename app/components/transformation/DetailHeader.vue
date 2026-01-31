@@ -7,11 +7,11 @@
       <h1
         class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white leading-tight"
       >
-        {{ transformation.product_name }}
+        {{ transformation?.product_name }}
       </h1>
 
       <NuxtLink
-        :to="`/purchases/${transformation.purchase_id}`"
+        :to="`/purchases/${transformation?.purchase_id}`"
         class="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 inline-flex items-center gap-1"
       >
         Lien vers l'achat original
@@ -22,22 +22,22 @@
 
     <!-- Stats compactes intégrées -->
     <div
-      class="p-4 border rounded-lg border-gray-200 dark:border-gray-700"
+      class="p-4"
     >
-      <div class="text-left grid grid-cols-3 gap-4 md:gap-8">
+      <div class="grid grid-cols-3 gap-4">
         <!-- Reçu -->
         <MetricsWithBadge
           title="Reçu"
-          :value="transformation.quantity_received.toString()"
-          :badge-value="transformation.unit"
+          :value="transformation?.quantity_received.toString() || '0'"
+          :badge-value="transformation?.unit || 'unit'"
         />
 
         <!-- Utilisable -->
-        <div class="text-center md:text-left">
+        <div class="">
           <MetricsWithBadge
             title="Utilisable"
-            :value="transformation.quantity_usable.toString()"
-            :badge-value="transformation.unit"
+            :value="transformation?.quantity_usable.toString() || '0'"
+            :badge-value="transformation?.unit || 'unit'"
           />
           <span class="text-xs text-green-600 font-medium">
             {{ usablePercentage }}%
@@ -45,11 +45,11 @@
         </div>
 
         <!-- Déchets -->
-        <div class="text-center md:text-left">
+        <div class="">
           <MetricsWithBadge
             title="Déchet"
-            :value="transformation.waste_quantity.toString()"
-            :badge-value="transformation.unit"
+            :value="transformation?.waste_quantity.toString() || '0'"
+            :badge-value="transformation?.unit || 'unit'"
             color="red"
           />
           <span class="text-xs text-red-600 font-medium">

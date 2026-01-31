@@ -4,7 +4,7 @@ const dateStart = defineModel<string>("dateStart", { default: "" });
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div class="space-y-4 px-4">
     <div
       class="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
     >
@@ -15,7 +15,7 @@ const dateStart = defineModel<string>("dateStart", { default: "" });
     </div>
 
     <!-- Filtres -->
-    <div class="flex flex-col sm:flex-row gap-3">
+    <div class="px-4 flex flex-col sm:flex-row gap-3">
       <UInput
         v-model="searchQuery"
         icon="i-heroicons-magnifying-glass"
