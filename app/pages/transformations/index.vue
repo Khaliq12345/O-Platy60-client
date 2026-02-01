@@ -1,55 +1,46 @@
 <template>
   <UDashboardPanel>
     <template #header>
-      <CustomDashboardNav title="Transformations"> </CustomDashboardNav>
+      <CustomDashboardNav title="Transformations" />
     </template>
-    <!-- Header connecté avec v-model -->
+
     <template #body>
       <Loading v-if="loading" />
 
-      <div
-        v-else-if="filteredTransformations.length === 0"
-        class="text-center py-12"
-      >
-        <UIcon
-          name="i-heroicons-inbox"
-          class="w-12 h-12 text-gray-400 mx-auto mb-3"
-        />
-        <p class="text-gray-500 dark:text-gray-400">
-          Aucune transformation trouvée
-        </p>
+      <div v-else-if="transformations.length === 0" class="text-center py-12">
+        <UIcon name="i-heroicons-inbox" class="w-12 h-12 text-gray-400 mx-auto mb-3" />
+        <p class="text-gray-500 dark:text-gray-400">Aucune transformation trouvée</p>
       </div>
 
       <div v-else class="px-2 space-y-6 overflow-y-auto">
         <TransformationListHeader class="w-full mx-auto mb-2" />
-        <Filters @filter="handleFilter" />
+        
+        <!-- Intégration forcée avec v-model -->
+        <Filters 
+          v-model:searchQuery="searchQuery"
+          v-model:dateRange="dateRange"
+          @filter="handleFilter"
+        />
+
         <TransformationList
-          v-for="transformation in paginatedTransformations"
+          v-for="transformation in transformations"
           :key="transformation.id"
           :transformation="transformation"
           class="mx-auto w-full md:w-3/4"
         />
       </div>
 
-      <!-- Pagination NuxtUI -->
-      <div
-        v-if="!loading && filteredTransformations.length > itemsPerPage"
-        class="mt-6 flex justify-center"
-      >
+      <!-- Pagination -->
+      <div v-if="!loading && transformations.length > itemsPerPage" class="mt-6 flex justify-center">
         <UPagination
           v-model="currentPage"
           :page-count="itemsPerPage"
-          :total="filteredTransformations.length"
+          :total="transformations.length"
         />
       </div>
 
-      <!-- Info pagination -->
-      <div
-        v-if="!loading && filteredTransformations.length > 0"
-        class="mt-6 text-center text-sm text-gray-500"
-      >
-        Page {{ currentPage }} sur {{ totalPages }} •
-        {{ filteredTransformations.length }} résultats
+      <div v-if="!loading && transformations.length > 0" class="mt-6 text-center text-sm text-gray-500">
+        Page {{ currentPage }} sur {{ totalPages }} • {{ transformations.length }} résultats
       </div>
     </template>
   </UDashboardPanel>
@@ -65,20 +56,23 @@ const toast = useToast();
 const loading = ref(true);
 const transformations = ref<TransformationSummary[]>([]);
 const searchQuery = ref("");
-const now = today(getLocalTimeZone());
-const dateStart = ref(new CalendarDate(now.year, 1, 1));
-const dateEnd = ref(now.add({ years: 1 }));
 const currentPage = ref(1);
 const itemsPerPage = 10;
 const totalItems = ref(0);
+
+const now = today(getLocalTimeZone());
+const dateRange = ref({
+  start: new CalendarDate(now.year, 1, 1).toString(),
+  end: now.add({ years: 1 }).toString()
+});
 
 const loadTransformations = async () => {
   try {
     loading.value = true;
     const response = await get<TransformationSummary[]>("/transformations", {
       search: searchQuery.value,
-      date_start: dateStart.value.toString(),
-      date_end: dateEnd.value.toString(),
+      start_date: dateRange.value.start.toString(),  // Adapte à la structure de Filters
+      end_date: dateRange.value.end.toString(),
     });
     transformations.value = response;
     totalItems.value = response.length;
@@ -93,50 +87,17 @@ const loadTransformations = async () => {
   }
 };
 
-const filteredTransformations = computed(() => {
-  let result = transformations.value;
-
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase();
-    result = result.filter(
-      (t) =>
-        t.product_name.toLowerCase().includes(q) ||
-        t.purchase_id?.toLowerCase().includes(q),
-    );
-  }
-
-  if (dateStart.value) {
-    const start = new Date(dateStart.value);
-    result = result.filter((t) => new Date(t.transformation_date) >= start);
-  }
-
-  if (dateEnd.value) {
-    const end = new Date(dateEnd.value);
-    end.setHours(23, 59, 59);
-    result = result.filter((t) => new Date(t.transformation_date) <= end);
-  }
-
-  return result;
-});
-
-function handleFilter(filter: {
-  search: string;
-  date: { start: any; end: any };
-}) {
-  searchQuery.value = filter.search;
-  dateStart.value = filter.date.start;
-  dateEnd.value = filter.date.end;
-  console.log(filter);
+function handleFilter() {
+  loadTransformations();
+  
+  console.log("Filtres appliqués:", {
+    search: searchQuery.value,
+    dateRange: dateRange.value
+  });
 }
 
-const paginatedTransformations = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage;
-  const end = start + itemsPerPage;
-  return filteredTransformations.value.slice(start, end);
-});
-
 const totalPages = computed(() =>
-  Math.ceil(filteredTransformations.value.length / itemsPerPage),
+  Math.ceil(transformations.value.length / itemsPerPage)
 );
 
 onMounted(() => {
