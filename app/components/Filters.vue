@@ -1,21 +1,20 @@
 <template>
-  <!-- Desktop: Layout horizontal -->
-  <div class="hidden sm:flex px-4 flex-row gap-3 items-center">
+  <div class="hidden md:flex items-center px-4 gap-3 w-full">
     <UInput
       v-model="searchQuery"
+      name="Search"
       icon="i-heroicons-magnifying-glass"
       placeholder="Rechercher..."
-      class="grow h-full"
+      class="grow"
     />
 
-    <!-- Slot filtres additionnels - visible sur desktop -->
     <div class="flex flex-row gap-3 items-center">
       <slot name="filters" />
     </div>
 
     <UInputDate ref="inputDate" v-model="dateRange" range>
       <template #trailing>
-        <UPopover :reference="inputDate?.inputsRef[0]?.$el">
+        <UPopover :reference="inputDate?.inputsRef?.[0]?.$el">
           <UButton
             color="neutral"
             variant="link"
@@ -36,24 +35,18 @@
       </template>
     </UInputDate>
 
-    <UButton
-      icon="i-heroicons-funnel"
-      @click="
-        () => {
-          updateDate;
-          emit('filter');
-        }
-      "
-    />
+    <UButton icon="i-heroicons-funnel" @click="reloadPurchase()" />
 
-    <!-- Slot actions - desktop only -->
-    <slot name="actions" />
+    <div class="flex items-center gap-2">
+      <slot name="actions" />
+    </div>
   </div>
 
   <!-- Mobile: Input visible + bouton drawer -->
-  <div class="sm:hidden px-4 flex flex-row gap-2">
+  <div class="md:hidden px-4 flex flex-row gap-2">
     <UInput
       v-model="searchQuery"
+      name="Search"
       icon="i-heroicons-magnifying-glass"
       placeholder="Rechercher..."
       class="grow"
@@ -70,7 +63,13 @@
   </div>
 
   <!-- Mobile: Bottom Drawer avec filtres additionnels -->
-  <UDrawer v-model:open="isOpen" direction="bottom">
+  <UDrawer
+    v-model:open="isOpen"
+    direction="bottom"
+    title="Filtres"
+    ,
+    description="Tous les filtres"
+  >
     <template #content>
       <div class="p-4 space-y-4">
         <div
@@ -85,40 +84,51 @@
           />
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-4 flex flex-col">
+          <UInput
+            name="Search"
+            v-model="searchQuery"
+            icon="i-heroicons-magnifying-glass"
+            placeholder="Rechercher..."
+            class="grow"
+          />
           <!-- Slot filtres dans le drawer (mobile uniquement) -->
-          <div class="space-y-3">
+          <div class="gap-2 flex flex-row items-center">
             <slot name="filters" />
-          </div>
-
-          <UInputDate ref="inputDate" v-model="dateRange" range class="w-full">
-            <template #trailing>
-              <UPopover :reference="inputDate?.inputsRef[0]?.$el">
-                <UButton
-                  color="neutral"
-                  variant="link"
-                  size="sm"
-                  icon="i-lucide-calendar"
-                  aria-label="Select a date range"
-                  class="px-0"
-                />
-                <template #content>
-                  <UCalendar
-                    v-model="dateRange"
-                    class="p-2"
-                    :number-of-months="1"
-                    range
+            <UInputDate
+              ref="inputDate"
+              v-model="dateRange"
+              range
+              class="w-full"
+            >
+              <template #trailing>
+                <UPopover :reference="inputDate?.inputsRef[0]?.$el">
+                  <UButton
+                    color="neutral"
+                    variant="link"
+                    size="sm"
+                    icon="i-lucide-calendar"
+                    aria-label="Select a date range"
+                    class="px-0"
                   />
-                </template>
-              </UPopover>
-            </template>
-          </UInputDate>
+                  <template #content>
+                    <UCalendar
+                      v-model="dateRange"
+                      class="p-2"
+                      :number-of-months="1"
+                      range
+                    />
+                  </template>
+                </UPopover>
+              </template>
+            </UInputDate>
+          </div>
 
           <UButton
             icon="i-heroicons-funnel"
             label="Appliquer"
             class="w-full"
-            @click="emit('filter')"
+            @click="reloadPurchase()"
           />
         </div>
       </div>
@@ -133,6 +143,14 @@ const emit = defineEmits<{
   filter: [];
 }>();
 
+// Connect the enter keyboard in to the component
+defineShortcuts({
+  enter: {
+    usingInput: "Search",
+    handler: () => reloadPurchase(),
+  },
+});
+
 const searchQuery = defineModel("searchQuery");
 const dateUpdated = defineModel("dateRange");
 
@@ -144,11 +162,14 @@ const dateRange = shallowRef({
   start: new CalendarDate(now.year, 1, 1),
   end: now.add({ years: 1 }),
 });
-// Update daterange filter
-const updateDate = computed(() => {
+
+const reloadPurchase = () => {
+  console.log("RELOADING!!");
+  // Update daterange filter
   dateUpdated.value = {
     start: dateRange.value?.start.toString(),
     end: dateRange.value?.end.toString(),
   };
-});
+  emit("filter");
+};
 </script>

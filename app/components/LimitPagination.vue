@@ -1,23 +1,25 @@
 <template>
   <div class="flex items-center justify-between px-4 py-3">
     <UPagination
-      :page="page"
+      v-model:page="currentPage"
       :total="total"
       :items-per-page="limit"
-      @update:page="emit('changePage', $event)"
+      @update:page="$emit('changePage', currentPage)"
     />
 
     <USelect
-      :model-value="limit"
+      v-model="currentLimit"
       :items="options"
       class="w-16"
-      @update:model-value="onLimitChange"
+      @update:model-value="
+        $emit('changeLimit', { limit: currentLimit, page: 1 })
+      "
     />
   </div>
 </template>
 
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
   page: number;
   limit: number;
   total: number;
@@ -25,17 +27,16 @@ defineProps<{
 
 const emit = defineEmits<{
   changePage: [page: number];
-  changeLimit: [limit: number];
+  changeLimit: [pageInfo: object];
 }>();
 
 const options = [
+  { label: "2", value: 2 },
   { label: "20", value: 20 },
   { label: "50", value: 50 },
   { label: "100", value: 100 },
 ];
 
-const onLimitChange = (val: number) => {
-  emit("changeLimit", val);
-  emit("changePage", 1); // Reset à la page 1 si changement de limit
-};
+const currentLimit = ref(props.limit);
+const currentPage = ref(props.page);
 </script>

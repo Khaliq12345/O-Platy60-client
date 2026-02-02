@@ -15,17 +15,25 @@
       v-else
       :purchases="purchases"
       :categories="categories"
-      @edit="handleEdit"
-      @delete="handleDelete"
       class="grow"
     />
 
-    <PurchaseListPagination
-      :page="currentPage"
+    <LimitPagination
+      :page="query.page"
       :limit="query.limit"
-      :total="totalItems"
-      @change-page="query.page = $event"
-      @change-limit="query.limit = $event"
+      :total="query.total"
+      @change-page="
+        (val: number) => {
+          query.page = val;
+          handleFilter();
+        }
+      "
+      @change-limit="
+        (val: object) => {
+          (((query.limit = val.limit), (query.page = val.page)),
+            handleFilter());
+        }
+      "
     />
   </div>
 </template>
@@ -39,19 +47,14 @@ const { get } = useApi();
 const purchases = ref<PurchaseItem[]>([]);
 const categories = ref<Category[]>([]);
 
-// Pagination
-const currentPage = ref(1);
-const itemsPerPage = ref(20);
-const totalPages = ref(1);
-
 // Category to share among all children
 provide("categories", categories);
 
-const totalItems = ref(0);
 const loading = ref(true);
 const query = ref({
   page: 1,
   limit: 20,
+  total: 100,
 });
 const filterQuery = ref();
 
@@ -61,10 +64,14 @@ async function loadCategories() {
 
 async function loadPurchases() {
   loading.value = true;
+  interface ApiResponse {
+    purchases: PurchaseItem[];
+    count: number;
+  }
   try {
-    const response = await get<PurchaseItem[]>("/purchases", query.value);
-    console.log(response);
-    purchases.value = response;
+    const response = await get<ApiResponse>("/purchases", query.value);
+    purchases.value = response.purchases;
+    query.value.total = response.count;
   } catch (error) {
     console.log(error);
   } finally {
@@ -74,16 +81,7 @@ async function loadPurchases() {
 
 function handleFilter() {
   query.value = { ...query.value, ...filterQuery.value };
-  console.log(filterQuery.value.date);
   loadPurchases();
-}
-
-function handleEdit(item: PurchaseItem) {
-  console.log("Edit", item);
-}
-
-function handleDelete(item: PurchaseItem) {
-  console.log("Delete", item);
 }
 
 function handleExport() {
