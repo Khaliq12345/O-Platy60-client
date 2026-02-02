@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center justify-between px-4 py-3">
+  <div class="flex flex-col md:flex-row gap-4 md:items-center md:justify-between px-4 py-3">
     <UPagination
       v-model:page="currentPage"
       :total="total"

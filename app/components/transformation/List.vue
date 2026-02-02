@@ -1,5 +1,5 @@
 <template>
-  <div class="p-2 rounded-md shadow hover:shadow-lg transition-shadow duration-300">
+  <div class="p-2 rounded-md shadow dark:shadow-gray-800 hover:shadow-lg transition-shadow duration-300">
     <!-- Header primary -->
     <div class="mt-2 px-2 flex items-center justify-between">
       <UBadge color="primary" variant="solid" class="rounded-full">
@@ -94,12 +94,12 @@
 
 <script setup lang="ts">
 import type {
-  TransformationSummary,
+  Transformation,
   TransformationStep,
 } from "~/types/transformation";
 
 const props = defineProps<{
-  transformation: TransformationSummary;
+  transformation: Transformation;
 }>();
 
 const { get } = useApi();
