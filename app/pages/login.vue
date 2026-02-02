@@ -5,6 +5,7 @@
       description="Connectez-vous"
       :fields="fields"
       :schema="schema"
+      :submit="{ label: 'Connexion'
       :ui="{
         title: 'text-4xl font-bold',
         root: 'w-full max-w-sm mx-auto px-8'
