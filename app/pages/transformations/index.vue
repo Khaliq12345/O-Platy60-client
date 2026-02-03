@@ -5,11 +5,21 @@
     </template>
 
     <template #body>
-      <div class="h-full mx-auto md:w-3/4 space-y-2">
-        <div
-          v-if="transformations.length === 0 && !loading"
-          class="text-center py-12"
-        >
+      <div class="h-full md:mx-auto md:w-3/4 space-y-2">
+        <TransformationListHeader class="mb-2" />
+
+        <!-- Intégration forcée avec v-model -->
+        <Filters
+          v-model:searchQuery="searchQuery"
+          v-model:dateRange="dateRange"
+          @filter="handleFilter"
+        />
+
+        <div v-if="loading" class="h-38 flex items-center justify-center">
+          <Loading />
+        </div>
+
+        <div v-else-if="transformations.length === 0" class="text-center py-12">
           <UIcon
             name="i-heroicons-inbox"
             class="w-12 h-12 text-gray-400 mx-auto mb-3"
@@ -19,45 +29,31 @@
           </p>
         </div>
 
-        <div v-else class="px-2 space-y-6 flex flex-col">
-          <TransformationListHeader class="mb-2" />
+        <TransformationList
+          v-else
+          v-for="transformation in transformations"
+          :key="transformation.id"
+          :transformation="transformation"
+        />
 
-          <!-- Intégration forcée avec v-model -->
-          <Filters
-            v-model:searchQuery="searchQuery"
-            v-model:dateRange="dateRange"
-            @filter="handleFilter"
-          />
-
-          <div v-if="loading" class="h-38 flex items-center justify-center">
-            <Loading />
-          </div>
-          <TransformationList
-            v-else
-            v-for="transformation in transformations"
-            :key="transformation.id"
-            :transformation="transformation"
-          />
-
-          <!-- Pagination -->
-          <LimitPagination
-            :page="query.page"
-            :limit="query.limit"
-            :total="query.total"
-            @change-page="
-              (val: number) => {
-                query.page = val;
-                handleFilter();
-              }
-            "
-            @change-limit="
-              (val: object) => {
-                (((query.limit = val.limit), (query.page = val.page)),
-                  handleFilter());
-              }
-            "
-          />
-        </div>
+        <!-- Pagination -->
+        <LimitPagination
+          :page="query.page"
+          :limit="query.limit"
+          :total="query.total"
+          @change-page="
+            (val: number) => {
+              query.page = val;
+              handleFilter();
+            }
+          "
+          @change-limit="
+            (val: object) => {
+              (((query.limit = val.limit), (query.page = val.page)),
+                handleFilter());
+            }
+          "
+        />
       </div>
     </template>
   </UDashboardPanel>
