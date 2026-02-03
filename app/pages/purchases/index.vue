@@ -1,8 +1,7 @@
 <template>
   <UDashboardPanel>
     <template #header>
-      <CustomDashboardNav title="Achats">
-      </CustomDashboardNav>
+      <CustomDashboardNav title="Achats" class=""> </CustomDashboardNav>
     </template>
 
     <template #body>

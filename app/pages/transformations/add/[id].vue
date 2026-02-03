@@ -1,55 +1,63 @@
 <template>
-  <div class="mx-auto container py-4 overflow-x-auto w-full">
-    <div class="w-full">
-      <UPageHeader>
-        <BackButton></BackButton>
-        <template #title>
-          <div class="text-xl md:text-2xl">
-            Transformation sur
-            <span class="text-primary-600 dark:text-primary-400">
-              {{ purchase?.item_name }}
-            </span>
-          </div>
-        </template>
-      </UPageHeader>
+  <UDashboardPanel>
+    <template #header>
+      <CustomDashboardNav title="Nouvelle Section Transformations" />
+    </template>
 
-      <!-- CONTENT CENTRÉ -->
-      <div class="flex flex-col items-center w-full mt-5">
-        <!-- Loading Skeleton -->
-        <div v-if="loading" class="w-full space-y-6">
-          <LoadingSkeleton class="w-full"></LoadingSkeleton>
-        </div>
-
-        <!-- Error State -->
-        <div v-else-if="error || !purchase" class="w-full max-w-3xl">
-          <UEmpty icon="i-lucide-file" title="Cette achat n'existe pas">
-            <template #actions>
-              <UButton
-                icon="i-lucide-arrow-up-right"
-                variant="subtle"
-                :to="`/purchases`"
-                >Rediriger vers achats</UButton
-              >
-              <UButton
-                icon="i-lucide-plus"
-                variant="subtle"
-                :to="`/purchases/add`"
-                >Cree un nouvelle achat</UButton
-              >
+    <template #body>
+      <div class="mx-auto container py-4 overflow-x-auto w-full">
+        <div class="w-full">
+          <UPageHeader>
+            <BackButton></BackButton>
+            <template #title>
+              <div class="text-xl md:text-2xl">
+                Transformation sur
+                <span class="text-primary-600 dark:text-primary-400">
+                  {{ purchase?.item_name }}
+                </span>
+              </div>
             </template>
-          </UEmpty>
-        </div>
+          </UPageHeader>
 
-        <!-- Form -->
-        <div v-if="purchase" class="w-full">
-          <TransformationAdd
-            :purchase="purchase"
-            class="shadow-lg shadow-gray-200/50 dark:shadow-black/20"
-          />
+          <!-- CONTENT CENTRÉ -->
+          <div class="flex flex-col items-center w-full mt-5">
+            <!-- Loading Skeleton -->
+            <div v-if="loading" class="w-full space-y-6">
+              <LoadingSkeleton class="w-full"></LoadingSkeleton>
+            </div>
+
+            <!-- Error State -->
+            <div v-else-if="error || !purchase" class="w-full max-w-3xl">
+              <UEmpty icon="i-lucide-file" title="Cette achat n'existe pas">
+                <template #actions>
+                  <UButton
+                    icon="i-lucide-arrow-up-right"
+                    variant="subtle"
+                    :to="`/purchases`"
+                    >Rediriger vers achats</UButton
+                  >
+                  <UButton
+                    icon="i-lucide-plus"
+                    variant="subtle"
+                    :to="`/purchases/add`"
+                    >Cree un nouvelle achat</UButton
+                  >
+                </template>
+              </UEmpty>
+            </div>
+
+            <!-- Form -->
+            <div v-if="purchase" class="w-full">
+              <TransformationAdd
+                :purchase="purchase"
+                class="shadow-lg shadow-gray-200/50 dark:shadow-black/20"
+              />
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
+    </template>
+  </UDashboardPanel>
 </template>
 
 <script setup lang="ts">

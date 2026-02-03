@@ -1,14 +1,16 @@
 <template>
-  <div class="flex flex-col md:flex-row gap-4 md:items-center md:justify-between px-4 py-3">
+  <div class="flex flex-row gap-4 items-center justify-between px-4 py-3">
     <UPagination
       v-model:page="currentPage"
       :total="total"
       :items-per-page="limit"
       @update:page="$emit('changePage', currentPage)"
+      size="sm"
     />
 
     <USelect
       v-model="currentLimit"
+      size="sm"
       :items="options"
       class="w-16"
       @update:model-value="
