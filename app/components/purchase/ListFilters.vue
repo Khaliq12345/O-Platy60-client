@@ -1,5 +1,4 @@
 <template>
-  <p>{{ searchQuery }}</p>
   <Filters
     v-model:search-query="searchQuery"
     v-model:date-range="dateRange"
