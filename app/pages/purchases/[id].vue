@@ -10,6 +10,7 @@
           :item-name="itemName"
           :purchase-id="purchaseId"
         ></PurchaseDetailHeader>
+
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
           <PurchaseDetailInfo
             :purchase-id="purchaseId"

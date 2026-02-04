@@ -1,29 +1,9 @@
-<script setup lang="ts">
-import type { TransformationStep } from "~/types/transformation";
-
-const props = defineProps<{
-  step: TransformationStep;
-  stepNumber: number;
-  unit?: string;
-}>();
-
-const formatDateTime = (date: string) => {
-  return new Date(date).toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
-</script>
-
 <template>
-  <div
-    class="p-4 space-y-2"
-  >
+  <div class="p-4 space-y-2">
     <div class="flex gap-2 items-center">
-      <p class="text-primary-600 dark:text-primary-400 font-bold text-md md:text-xl">
+      <p
+        class="text-primary-600 dark:text-primary-400 font-bold text-md md:text-xl"
+      >
         #{{ stepNumber }}
       </p>
       <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -35,7 +15,9 @@ const formatDateTime = (date: string) => {
       class="flex flex-col justify-between md:flex-row md:items-center gap-2"
     >
       <!-- Nom de l'étape -->
-      <h4 class="font-semibold text-gray-900 dark:text-white text-md md:text-lg">
+      <h4
+        class="font-semibold text-gray-900 dark:text-white text-md md:text-lg"
+      >
         {{ step.step_name }}
       </h4>
 
@@ -55,3 +37,23 @@ const formatDateTime = (date: string) => {
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import type { TransformationStep } from "~/types/transformation";
+
+const props = defineProps<{
+  step: TransformationStep;
+  stepNumber: number;
+  unit?: string;
+}>();
+
+const formatDateTime = (date: string) => {
+  return new Date(date).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+</script>
