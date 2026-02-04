@@ -2,13 +2,44 @@
 
 export function useApi() {
   const config = useRuntimeConfig()
+  const authStore = useAuthStore()
 
   // Fonction de base pour toutes les requêtes
   async function fetch<T>(url: string, options: any = {}): Promise<T> {
-    return $fetch<T>(url, {
-      baseURL: config.public.apiBaseUrl,  // Ex: 'http://localhost:3000/api'
-      ...options
-    })
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+
+    // Add authorization header if token exists
+    if (authStore.accessToken) {
+      headers.Authorization = `Bearer ${authStore.accessToken}`
+    }
+
+    try {
+      return await $fetch<T>(url, {
+        baseURL: config.public.apiBaseUrl,
+        headers,
+        ...options
+      })
+    } catch (error: any) {
+      // Handle token refresh on 401
+      if (error.status === 401 && authStore.refreshToken) {
+        const { refreshToken } = useAuth()
+        const refreshed = await refreshToken()
+        
+        if (refreshed) {
+          // Retry original request with new token
+          headers.Authorization = `Bearer ${refreshed.access_token}`
+          return await $fetch<T>(url, {
+            baseURL: config.public.apiBaseUrl,
+            headers,
+            ...options
+          })
+        }
+      }
+      throw error
+    }
   }
 
   return {

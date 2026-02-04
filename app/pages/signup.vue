@@ -6,33 +6,42 @@
       :fields="fields"
       :schema="schema"
       :submit="{ label: 'Inscription' }"
+      :loading="loading"
       :ui="{
         title: 'text-4xl font-bold',
         root: 'w-full max-w-sm mx-auto px-8'
       }"
       @submit="onSubmit"
-    />
+    >
+      <template #footer>
+        <p class="text-center text-sm text-gray-600 mt-4">
+          Déjà un compte ?
+          <NuxtLink to="/login" class="text-primary-500 hover:text-primary-600">
+            Connectez-vous
+          </NuxtLink>
+        </p>
+      </template>
+    </UAuthForm>
   </div>
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: false })
+definePageMeta({ layout: false, middleware: 'guest' })
 import type { AuthFormField, FormSubmitEvent } from '@nuxt/ui'
 import { z } from 'zod'
+import type { SignupForm } from '~/types/auth'
+import { Role } from '~/types/enums'
+
+const { signup } = useAuth()
+const toast = useToast()
+const loading = ref(false)
 
 const fields: AuthFormField[] = [
   {
-    name: 'nom',
+    name: 'full_name',
     type: 'text',
-    label: 'Nom',
-    placeholder: 'Dupont',
-    required: true
-  },
-  {
-    name: 'prenom',
-    type: 'text',
-    label: 'Prénom',
-    placeholder: 'Jean',
+    label: 'Nom complet',
+    placeholder: 'Jean Dupont',
     required: true
   },
   {
@@ -48,9 +57,9 @@ const fields: AuthFormField[] = [
     label: 'Rôle',
     placeholder: 'Sélectionnez un rôle',
     required: true,
-    items: [
-      { label: 'Admin', value: 'admin' },
-      { label: 'Manager', value: 'manager' }
+    options: [
+      { label: 'Admin', value: Role.ADMIN },
+      { label: 'Manager', value: Role.MANAGER }
     ]
   },
   {
@@ -63,20 +72,42 @@ const fields: AuthFormField[] = [
 ]
 
 const schema = z.object({
-  nom: z.string({ message: "Nom requis" }).min(1, 'Nom requis'),
-  prenom: z.string({ message: "Prénom requis" }).min(1, 'Prénom requis'),
-  email: z.string({ message: "Email requis" }).email('Email invalide'),
-  role: z.string({ message: "Rôle requis" }).refine(
-    (val) => ['admin', 'manager'].includes(val),
-    { message: 'Veuillez sélectionner un rôle valide' }
-  ),
-  password: z.string({ message: "Mot de passe requis" }).min(8, 'Le mot de passe doit contenir au moins 8 caractères')
+  full_name: z.string().min(1, 'Nom complet requis'),
+  email: z.string().email('Email invalide'),
+  role: z.nativeEnum(Role, { message: 'Veuillez sélectionner un rôle valide' }),
+  password: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères')
 })
-
 
 type Schema = z.output<typeof schema>
 
-function onSubmit(payload: FormSubmitEvent<Schema>) {
-  console.log('Inscription:', payload.data)
+async function onSubmit(payload: FormSubmitEvent<Schema>) {
+  loading.value = true
+  
+  try {
+    const userData: SignupForm = {
+      full_name: payload.data.full_name,
+      email: payload.data.email,
+      password: payload.data.password,
+      role: payload.data.role
+    }
+    
+    await signup(userData)
+    
+    toast.add({
+      title: 'Inscription réussie',
+      description: 'Votre compte a été créé avec succès',
+      color: 'green'
+    })
+    
+    await navigateTo('/')
+  } catch (error: any) {
+    toast.add({
+      title: 'Erreur d\'inscription',
+      description: error.data?.message || 'Une erreur est survenue lors de l\'inscription',
+      color: 'red'
+    })
+  } finally {
+    loading.value = false
+  }
 }
 </script>
