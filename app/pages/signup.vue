@@ -1,12 +1,11 @@
 <template>
   <div class="h-screen w-screen flex items-center justify-center">
-    <div class="w-full max-w-sm mx-auto px-8 py-6">
-      <div>
+    <div class="w-full max-w-sm mx-auto px-8 py-6 space-y-6">
+  
         <div class="text-center space-y-2">
           <h1 class="text-4xl font-bold text-gray-900 dark:text-white">O-Platy</h1>
           <p class="text-gray-600 dark:text-gray-400">Créez votre compte</p>
         </div>
-      </div>
 
       <UForm :schema="schema" :state="state" @submit="onSubmit" class="space-y-4">
         <!-- Nom complet -->
