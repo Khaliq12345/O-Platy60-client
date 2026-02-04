@@ -55,8 +55,6 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ middleware: 'auth' })
-
 import type { TransformationSummary } from "~/types/transformation";
 
 const route = useRoute();

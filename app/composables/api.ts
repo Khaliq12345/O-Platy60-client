@@ -4,14 +4,33 @@ export function useApi() {
   const config = useRuntimeConfig()
   const authStore = useAuthStore()
 
-  // Fonction de base pour toutes les requêtes
+  async function refreshTokens() {
+    if (!authStore.refreshToken) return false
+    
+    try {
+      const response = await $fetch<any>('/auth/refresh', {
+        baseURL: config.public.apiBaseUrl,
+        method: 'POST',
+        body: { refresh_token: authStore.refreshToken }
+      })
+      
+      if (response.user) {
+        authStore.set(response.user, response.access_token, response.refresh_token)
+        return true
+      }
+    } catch {
+      authStore.clear()
+      await navigateTo('/login')
+    }
+    return false
+  }
+
   async function fetch<T>(url: string, options: any = {}): Promise<T> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...options.headers
     }
 
-    // Add authorization header if token exists
     if (authStore.accessToken) {
       headers.Authorization = `Bearer ${authStore.accessToken}`
     }
@@ -23,14 +42,10 @@ export function useApi() {
         ...options
       })
     } catch (error: any) {
-      // Handle token refresh on 401
-      if (error.status === 401 && authStore.refreshToken) {
-        const { refreshToken } = useAuth()
-        const refreshed = await refreshToken()
-        
+      if (error.status === 401) {
+        const refreshed = await refreshTokens()
         if (refreshed) {
-          // Retry original request with new token
-          headers.Authorization = `Bearer ${refreshed.access_token}`
+          headers.Authorization = `Bearer ${authStore.accessToken}`
           return await $fetch<T>(url, {
             baseURL: config.public.apiBaseUrl,
             headers,
@@ -43,19 +58,12 @@ export function useApi() {
   }
 
   return {
-    // GET avec query params optionnels
     get: <T>(url: string, query?: Record<string, any>) => 
       fetch<T>(url, { method: 'GET', query }),
-
-    // POST avec body
     post: <T>(url: string, body?: any) => 
       fetch<T>(url, { method: 'POST', body }),
-
-    // PUT avec body  
     put: <T>(url: string, body?: any) => 
       fetch<T>(url, { method: 'PUT', body }),
-
-    // DELETE
     delete: <T>(url: string) => 
       fetch<T>(url, { method: 'DELETE' })
   }

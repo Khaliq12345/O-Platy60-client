@@ -26,13 +26,14 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: false, middleware: 'guest' })
+definePageMeta({ layout: false })
 import type { AuthFormField, FormSubmitEvent } from '@nuxt/ui'
 import { z } from 'zod'
-import type { SignupForm } from '~/types/auth'
+import type { SignupForm, AuthResponse } from '~/types/auth'
 import { Role } from '~/types/enums'
 
-const { signup } = useAuth()
+const config = useRuntimeConfig()
+const authStore = useAuthStore()
 const toast = useToast()
 const loading = ref(false)
 
@@ -57,7 +58,7 @@ const fields: AuthFormField[] = [
     label: 'Rôle',
     placeholder: 'Sélectionnez un rôle',
     required: true,
-    options: [
+    items: [
       { label: 'Admin', value: Role.ADMIN },
       { label: 'Manager', value: Role.MANAGER }
     ]
@@ -72,11 +73,16 @@ const fields: AuthFormField[] = [
 ]
 
 const schema = z.object({
-  full_name: z.string().min(1, 'Nom complet requis'),
-  email: z.string().email('Email invalide'),
-  role: z.nativeEnum(Role, { message: 'Veuillez sélectionner un rôle valide' }),
-  password: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères')
+  nom: z.string({ message: "Nom requis" }).min(1, 'Nom requis'),
+  prenom: z.string({ message: "Prénom requis" }).min(1, 'Prénom requis'),
+  email: z.string({ message: "Email requis" }).email('Email invalide'),
+  role: z.string({ message: "Rôle requis" }).refine(
+    (val) => ['admin', 'manager'].includes(val),
+    { message: 'Veuillez sélectionner un rôle valide' }
+  ),
+  password: z.string({ message: "Mot de passe requis" }).min(8, 'Le mot de passe doit contenir au moins 8 caractères')
 })
+
 
 type Schema = z.output<typeof schema>
 
@@ -91,7 +97,15 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
       role: payload.data.role
     }
     
-    await signup(userData)
+    const response = await $fetch<AuthResponse>('/auth/signup', {
+      baseURL: config.public.apiBaseUrl,
+      method: 'POST',
+      body: userData
+    })
+    
+    if (response.user) {
+      authStore.set(response.user, response.access_token, response.refresh_token)
+    }
     
     toast.add({
       title: 'Inscription réussie',
@@ -99,7 +113,7 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
       color: 'green'
     })
     
-    await navigateTo('/')
+    await navigateTo('/login')
   } catch (error: any) {
     toast.add({
       title: 'Erreur d\'inscription',

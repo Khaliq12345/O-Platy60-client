@@ -12,8 +12,6 @@
   </UDashboardPanel>
 </template>
 
-<script lang="ts" setup>
-definePageMeta({ middleware: 'auth' })
-</script>
+<script lang="ts" setup></script>
 
 <style></style>

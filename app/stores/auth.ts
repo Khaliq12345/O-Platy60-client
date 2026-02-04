@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { AuthResponse, User } from '~/types/auth'
+import type { User } from '~/types/auth'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -8,40 +8,16 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!accessToken.value)
 
-  function setAuth(authData: AuthResponse) {
-    accessToken.value = authData.access_token
-    refreshToken.value = authData.refresh_token
-    user.value = authData.user || null
-    
-    // Store tokens in localStorage
-    if (process.client) {
-      localStorage.setItem('access_token', authData.access_token)
-      localStorage.setItem('refresh_token', authData.refresh_token)
-    }
+  function set(userData: User, access: string, refresh: string) {
+    user.value = userData
+    accessToken.value = access
+    refreshToken.value = refresh
   }
 
-  function clearAuth() {
+  function clear() {
     user.value = null
     accessToken.value = null
     refreshToken.value = null
-    
-    // Clear tokens from localStorage
-    if (process.client) {
-      localStorage.removeItem('access_token')
-      localStorage.removeItem('refresh_token')
-    }
-  }
-
-  function initAuth() {
-    if (process.client) {
-      const storedAccessToken = localStorage.getItem('access_token')
-      const storedRefreshToken = localStorage.getItem('refresh_token')
-      
-      if (storedAccessToken && storedRefreshToken) {
-        accessToken.value = storedAccessToken
-        refreshToken.value = storedRefreshToken
-      }
-    }
   }
 
   return {
@@ -49,8 +25,9 @@ export const useAuthStore = defineStore('auth', () => {
     accessToken: readonly(accessToken),
     refreshToken: readonly(refreshToken),
     isAuthenticated,
-    setAuth,
-    clearAuth,
-    initAuth
+    set,
+    clear
   }
+}, {
+  persist: true
 })

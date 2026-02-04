@@ -64,8 +64,6 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ middleware: 'auth' })
-
 import type { Transformation } from "~/types/transformation";
 import { CalendarDate, today, getLocalTimeZone } from "@internationalized/date";
 

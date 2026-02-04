@@ -26,12 +26,13 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: false, middleware: 'guest' })
+definePageMeta({ layout: false })
 import type { AuthFormField, FormSubmitEvent } from '@nuxt/ui'
 import { z } from 'zod'
-import type { AuthForm } from '~/types/auth'
+import type { AuthForm, AuthResponse } from '~/types/auth'
 
-const { login } = useAuth()
+const config = useRuntimeConfig()
+const authStore = useAuthStore()
 const toast = useToast()
 const loading = ref(false)
 
@@ -68,7 +69,15 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
       password: payload.data.password
     }
     
-    await login(credentials)
+    const response = await $fetch<AuthResponse>('/auth/login', {
+      baseURL: config.public.apiBaseUrl,
+      method: 'POST',
+      body: credentials
+    })
+    
+    if (response.user) {
+      authStore.set(response.user, response.access_token, response.refresh_token)
+    }
     
     toast.add({
       title: 'Connexion réussie',

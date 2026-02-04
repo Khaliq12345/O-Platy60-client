@@ -5,7 +5,7 @@
       <h1 class="text-2xl font-bold mb-4">Tableau de bord</h1>
       <div class="flex justify-between items-center mb-6">
         <p>Bienvenue, {{ authStore.user?.full_name || authStore.user?.email }}</p>
-        <UButton @click="handleLogout" color="red" variant="outline">
+        <UButton @click="logout" color="red" variant="outline">
           Déconnexion
         </UButton>
       </div>
@@ -14,12 +14,21 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ middleware: 'auth' })
-
 const authStore = useAuthStore()
-const { logout } = useAuth()
+const config = useRuntimeConfig()
 
-async function handleLogout() {
-  await logout()
+async function logout() {
+  try {
+    if (authStore.accessToken) {
+      await $fetch('/auth/logout', {
+        baseURL: config.public.apiBaseUrl,
+        method: 'POST',
+        body: { access_token: authStore.accessToken }
+      })
+    }
+  } finally {
+    authStore.clear()
+    await navigateTo('/login')
+  }
 }
 </script>
