@@ -1,87 +1,49 @@
 <template>
-  <UCard class="max-w-4xl mx-auto">
-    <template #header>
-      <MetricsWithBadge
-        title="Stock disponible"
-        :value="purchase?.quantity.toString() || '0'"
-        :badge-value="purchase?.unit || 'kg'"
-        color="green"
-      />
-    </template>
-
-    <UForm :schema="schema" :state="state" class="space-y-6" @submit="onSubmit">
+  <div>
+    <UForm :schema="schema" :state="state" class="space-y-2" @submit="onSubmit">
       <!-- Quantités -->
-      <div class="space-y-4">
-        <h3 class="font-semibold text-gray-900 dark:text-white border-b pb-2">
-          Quantités
-        </h3>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <!-- Quantité Reçue -->
-          <UFormField name="quantity_received" label="Quantité Reçue" required>
-            <UInputNumber
-              v-model="state.quantity_received"
-              :step="0.01"
-              :min="0.01"
-              :max="purchase?.quantity"
-              placeholder="0.00"
-              class="w-full"
-              :format-options="weightFormat(purchase.unit)"
-            />
-          </UFormField>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Quantité Reçue -->
+        <UFormField name="quantity_received" label="Quantité Reçue" required>
+          <UInputNumber
+            v-model="state.quantity_received"
+            :step="0.01"
+            :min="0.01"
+            :max="purchase?.quantity"
+            placeholder="0.00"
+            class="w-full"
+            :format-options="weightFormat(purchase.unit)"
+          />
+        </UFormField>
 
-          <!-- Quantité Utilisable (calculée et désactivée) -->
-          <UFormField
-            label="Quantité Utilisable"
-            name="quantity_usable"
-            required
-          >
-            <UInputNumber
-              :model-value="usableQuantity"
-              disabled
-              :step="0.01"
-              class="w-full"
-              :format-options="weightFormat(purchase.unit)"
-            />
-          </UFormField>
+        <!-- Quantité Utilisable (calculée et désactivée) -->
+        <UFormField label="Quantité Utilisable" name="quantity_usable" required>
+          <UInputNumber
+            :model-value="usableQuantity"
+            disabled
+            :step="0.01"
+            class="w-full"
+            :format-options="weightFormat(purchase.unit)"
+          />
+        </UFormField>
 
-          <!-- Déchets (saisissable) -->
-          <UFormField label="Déchets" name="waste_quantity" required>
-            <UInputNumber
-              v-model="state.waste_quantity"
-              :step="0.01"
-              :min="0"
-              :max="state.quantity_received"
-              placeholder="0.00"
-              class="w-full"
-              :format-options="weightFormat(purchase.unit)"
-            />
-          </UFormField>
-        </div>
+        <!-- Déchets (saisissable) -->
+        <UFormField label="Déchets" name="waste_quantity" required>
+          <UInputNumber
+            v-model="state.waste_quantity"
+            :step="0.01"
+            :min="0"
+            :max="state.quantity_received"
+            placeholder="0.00"
+            class="w-full"
+            :format-options="weightFormat(purchase.unit)"
+          />
+        </UFormField>
       </div>
 
-      <!-- Notes -->
-      <UFormField label="Notes" name="notes">
-        <UTextarea
-          v-model="state.notes"
-          :rows="3"
-          placeholder="Commentaires sur la transformation..."
-          class="w-full"
-        />
-      </UFormField>
-
       <!-- Actions -->
-      <div class="flex justify-end gap-3 pt-4">
-        <UButton
-          type="button"
-          variant="soft"
-          color="neutral"
-          @click="router.back()"
-          :loading="loading"
-          :disabled="loading"
-        >
-          Annuler
-        </UButton>
+      <div class="flex justify-center pt-2">
         <UButton
           type="submit"
           color="primary"
@@ -93,7 +55,7 @@
         </UButton>
       </div>
     </UForm>
-  </UCard>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -182,7 +144,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       icon: "i-heroicons-check-circle",
     });
 
-    router.push(`/purchases/${props.purchase?.id}`);
+    window.location.reload()
   } catch (error: any) {
     toast.add({
       title: "Erreur",

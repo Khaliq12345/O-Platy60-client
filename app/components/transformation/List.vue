@@ -1,95 +1,57 @@
 <template>
-  <div class="p-2 rounded-md shadow dark:shadow-gray-800 hover:shadow-lg transition-shadow duration-300">
-    <!-- Header primary -->
-    <div class="mt-2 px-2 flex items-center justify-between">
-      <UBadge color="primary" variant="solid" class="rounded-full">
-        {{ formatDate(transformation.transformation_date) }}
-      </UBadge>
-      <span class="text-sm text-primary-900 dark:text-primary-200">
-        Depuis:
-        <NuxtLink
-          :to="`/purchases/${transformation.purchase_id}`"
-          class="underline hover:no-underline font-medium"
-        >
-          Achat - {{ transformation.quantity_received }}kg 
-          <!-- need to be transformation.unit instead of kg -->
-        </NuxtLink>
-      </span>
-    </div>
-
-    <div class="p-4 space-y-6">
-      <!-- Titre et badge compteur -->
-      <div class="flex flex-col md:flex-row items-center justify-between gap-2">
-        <h3 class="text-xl font-bold text-gray-900 dark:text-white">
-          {{ transformation.product_name }}
+  <UCollapsible class="w-full">
+    <!-- Header (toujours visible) -->
+    <div
+      class="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg transition-colors group"
+    >
+      <div class="flex items-center gap-3">
+        <h3 class="text-md md:text-lg font-semibold text-gray-900 dark:text-white">
+          Transformations Effectuées
         </h3>
-        <UBadge color="neutral" variant="soft" class="w-fit">
-          {{ steps.length }} transformation{{ steps.length > 1 ? 's' : '' }}
-        </UBadge>
+        
+        <!-- Badge compteur -->
+        <UBadge 
+          v-if="!loading" 
+          :label="steps.length.toString()" 
+          color="primary" 
+          size="sm" 
+          variant="soft"
+        />
       </div>
 
-      <!-- Stats grid - Responsive -->
-      <div
-        class="text-sm md:grid md:grid-cols-3 border border-gray-200 dark:border-gray-700 rounded-md md:rounded-lg overflow-hidden md:divide-x divide-gray-200 dark:divide-gray-700"
-      >
-        <div
-          v-for="(stat, index) in stats"
-          :key="index"
-          class="p-2 text-center bg-gray-50/90 dark:bg-gray-800/50 flex items-center gap-2 md:gap-0 md:flex-col md:justify-center md:min-h-15"
-        >
-          <p class="text-gray-500 uppercase tracking-wider">
-            {{ stat.label }}:
-          </p>
-          <p
-            class="text-sm lg:text-lg font-bold text-gray-900 dark:text-white leading-tight"
-          >
-            {{ stat.value }}
-            <span class="text-xs font-normal text-gray-500">
-              {{ stat.unit }}
-            </span>
-          </p>
-        </div>
-      </div>
-
-      <!-- Liste des étapes et bouton -->
-      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div v-if="loadingSteps" class="flex-1 space-y-1">
-          <USkeleton v-for="i in 2" :key="i" class="h-4 w-24" />
-        </div>
-
-        <div v-else-if="steps.length > 0" class="flex-1">
-          <ul
-            class="list-disc list-inside text-sm text-gray-700 dark:text-gray-300 space-y-0.5"
-          >
-            <li
-              v-for="step in steps.slice(0, 3)"
-              :key="step.id"
-              class="truncate"
-            >
-              {{ step.step_name }}
-            </li>
-            <li v-if="steps.length > 3" class="text-gray-500 italic">
-              + {{ steps.length - 3 }} autres...
-            </li>
-          </ul>
-        </div>
-
-        <div v-else class="flex-1 text-sm text-gray-500 italic">
-          Aucune étape enregistrée
-        </div>
-
-        <UButton
-          :to="`/transformations/${transformation.id}`"
-          color="primary"
-          variant="solid"
-          trailing-icon="i-heroicons-arrow-right"
-          class="w-full sm:w-auto justify-center"
-        >
-          Voir détails
-        </UButton>
-      </div>
+      <!-- Chevron animé -->
+      <UIcon
+        name="i-lucide-chevron-down"
+        class="w-5 h-5 text-gray-400 transition-transform duration-200 group-data-[state=open]:rotate-180"
+      />
     </div>
-  </div>
+
+    <!-- Contenu (visible quand ouvert) -->
+    <template #content>
+      <div class="pt-2 pb-1 space-y-2">
+        <!-- Loading -->
+        <div v-if="loading" class="space-y-3 px-2">
+          <USkeleton v-for="i in 2" :key="i" class="h-20 w-full" />
+        </div>
+
+        <!-- Liste vide -->
+        <div v-else-if="steps.length === 0" class="text-center py-4 text-gray-500 text-sm">
+          Aucune transformation effectuée
+        </div>
+
+        <!-- Liste -->
+        <div v-else class="space-y-2 px-2">
+          <PurchaseTransformationStep
+            v-for="(step, index) in steps"
+            :key="step.id"
+            :step="step"
+            :step-number="index + 1"
+            :unit="unit"
+          />
+        </div>
+      </div>
+    </template>
+  </UCollapsible>
 </template>
 
 <script setup lang="ts">
@@ -99,55 +61,33 @@ import type {
 } from "~/types/transformation";
 
 const props = defineProps<{
+  transformationId: string;
   transformation: Transformation;
+  unit?: string;
 }>();
 
 const { get } = useApi();
+const toast = useToast();
+
+const loading = ref(true);
 const steps = ref<TransformationStep[]>([]);
-const loadingSteps = ref(false);
 
 const loadSteps = async () => {
   try {
-    loadingSteps.value = true;
+    loading.value = true;
     steps.value = await get<TransformationStep[]>(
-      `/transformation-steps/${props.transformation.id}/`,
+      `/transformation-steps/${props.transformationId}/`,
     );
-  } catch (error) {
-    steps.value = [];
+  } catch (error: any) {
+    toast.add({
+      title: "Erreur",
+      description: "Impossible de charger les étapes",
+      color: "error",
+    });
   } finally {
-    loadingSteps.value = false;
+    loading.value = false;
   }
 };
-
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-};
-
-// Stats configurables
-const stats = computed(() => [
-  {
-    label: "Reçu",
-    value: props.transformation.quantity_received,
-    unit: "kg",
-    extra: null,
-  },
-  {
-    label: "Utilisable",
-    value: props.transformation.quantity_usable,
-    unit: "kg",
-    extra: null,
-  },
-  {
-    label: "Déchets",
-    value: props.transformation.waste_quantity,
-    unit: "kg",
-    extra: `${Math.round((props.transformation.waste_quantity / props.transformation.quantity_received) * 100)}%`,
-  },
-]);
 
 onMounted(() => {
   loadSteps();

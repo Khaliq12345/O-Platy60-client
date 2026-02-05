@@ -16,7 +16,7 @@
             v-model="state.portions"
             placeholder="Nombre de portions"
             class="w-full"
-            :step="0.1"
+            :step="1"
           >
           </UInputNumber>
         </UFormField>
@@ -26,7 +26,7 @@
             v-model="state.quantity"
             placeholder="Entrer la quantité"
             class="w-full"
-            :step="0.1"
+            :step="1"
           >
           </UInputNumber>
         </UFormField>
@@ -63,37 +63,36 @@ const toast = useToast();
 const router = useRouter();
 
 // Schéma avec validation du stock max
-const schema = z
-  .object({
-    step_name: z.string().min(1, "Nom de l'étape requis"),
+const schema = z.object({
+  step_name: z.string().min(1, "Nom de l'étape requis"),
 
-    portions: z.coerce
-      .number("Ne peut pas être vide")
-      .min(1, "Minimum 1 portion")
-      .int("Doit être un nombre entier"),
+  portions: z.coerce
+    .number("Ne peut pas être vide")
+    .min(1, "Minimum 1 portion")
+    .int("Doit être un nombre entier"),
 
-    quantity: z.coerce
-      .number("Ne peut pas être vide")
-      .min(0.01, "Minimum 0.01")
-      .positive("Doit être positif"),
-  })
-  .superRefine((data, ctx) => {
-    if (data.quantity <= 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "La quantité doit être supérieure à 0",
+  quantity: z.coerce
+    .number("Ne peut pas être vide")
+    .min(0.01, "Minimum 0.01")
+    .positive("Doit être positif")
+    .refine(
+      (quantity) => {
+        const remaining = props.transformation.remaining_quantity;
+        return remaining == null || typeof remaining !== "number"
+          ? false
+          : quantity <= remaining;
+      },
+      {
+        message: (ctx) => {
+          const remaining = props.transformation.remaining_quantity;
+          return typeof remaining === "number"
+            ? `Stock insuffisant (${remaining} restants)`
+            : "Données de stock indisponibles";
+        },
         path: ["quantity"],
-      });
-    }
-
-    if (data.quantity > props.transformation.remaining_quantity) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: `Stock insuffisant (${props.transformation.remaining_quantity} restants)`,
-        path: ["quantity"],
-      });
-    }
-  });
+      }
+    ),
+});
 
 type Schema = z.infer<typeof schema>;
 
@@ -122,7 +121,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       icon: "i-heroicons-check-circle",
     });
 
-    router.push(`/transformations/${props.transformation.id}`);
+    window.location.reload();
   } catch (error: any) {
     toast.add({
       title: "Erreur",

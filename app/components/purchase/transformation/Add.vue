@@ -144,7 +144,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       icon: "i-heroicons-check-circle",
     });
 
-    router.push(`/purchases/${props.purchase?.id}`);
+    window.location.reload()
   } catch (error: any) {
     toast.add({
       title: "Erreur",
