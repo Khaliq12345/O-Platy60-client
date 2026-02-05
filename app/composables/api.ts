@@ -30,7 +30,6 @@ export function useApi() {
   }
 
   async function fetch<T>(url: string, options: any = {}): Promise<T> {
-    console.log("Access TOKEN ", authStore.accessToken);
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       ...options.headers,

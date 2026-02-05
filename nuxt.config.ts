@@ -12,7 +12,7 @@ export default defineNuxtConfig({
   },
 
   // Ensure the module is properly initialized
-  modules: ["@nuxt/ui", "@pinia/nuxt"],
+  modules: ["@nuxt/ui", "@pinia/nuxt", "pinia-plugin-persistedstate"],
 
   devtools: {
     enabled: true,

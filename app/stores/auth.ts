@@ -21,9 +21,9 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    user: readonly(user),
-    accessToken: readonly(accessToken),
-    refreshToken: readonly(refreshToken),
+    user,
+    accessToken,
+    refreshToken,
     isAuthenticated,
     set,
     clear
