@@ -16,20 +16,20 @@
       <p class="text-gray-500 dark:text-gray-400">
         Aucune transformation n'a été effectuée pour cet achat.
       </p>
-      <PurchaseTransformationAdd :purchase="purchase" />
+      <TransformationAdd :purchase="purchase" />
     </div>
 
     <!-- // Show this is there's transformation -->
     <div v-if="transformation" class="space-y-3">
       <!-- // Show the transformation metrics -->
-      <PurchaseTransformationEdit
+      <TransformationEdit
         v-if="edit"
         :transformation="transformation"
         :unit="transformation.unit"
         @cancel="edit = false"
       />
 
-      <PurchaseTransformationDetail
+      <TransformationDetailBody
         v-else
         :transformation="transformation"
         :unit="transformation.unit"
@@ -38,18 +38,18 @@
       <!-- // container to add new transformation -->
       <div v-if="transformation.remaining_quantity > 0" class="mt-2 p-2 rounded-md bg-gray-50 dark:bg-gray-800/50">
         <h2 class="font-bold">Ajoutez des transformations</h2>
-        <PurchaseTransformationAddStep :transformation="transformation" />
+        <TransformationStepAdd :transformation="transformation" />
       </div>
       <div v-else class="text-primary text-center text-sm">
         Vous ne pouvez plus ajouter de transformation pour ce achat
       </div>
 
-      <PurchaseTransformationList
+      <TransformationList
         :transformation="transformation"
         :transformation-id="transformation.id"
       />
 
-      <PurchaseTransformationFooter :transformation="transformation" />
+      <TransformationFooter :transformation="transformation" />
     </div>
   </UCard>
 </template>

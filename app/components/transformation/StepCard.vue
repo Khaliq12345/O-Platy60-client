@@ -1,38 +1,47 @@
 <template>
-  <div class="p-4 space-y-2">
-    <div class="flex gap-2 items-center">
-      <p
-        class="text-primary-600 dark:text-primary-400 font-bold text-md md:text-xl"
+  <div class="space-y-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-lg p-4">
+    <!-- Header -->
+    <div class="flex items-center gap-3 mb-3">
+      <!-- Numéro d'étape -->
+      <span
+        class="flex items-center justify-center w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400 font-bold text-sm"
       >
-        #{{ stepNumber }}
-      </p>
-      <p class="text-sm text-gray-500 dark:text-gray-400">
-        {{ formatDateTime(step.created_at) }}
-      </p>
-    </div>
+        {{ stepNumber }}
+      </span>
 
-    <div
-      class="flex flex-col justify-between md:flex-row md:items-center gap-2"
-    >
-      <!-- Nom de l'étape -->
-      <h4
-        class="font-semibold text-gray-900 dark:text-white text-md md:text-lg"
-      >
+      <!-- Titre -->
+      <h4 class="font-semibold text-gray-900 dark:text-white">
         {{ step.step_name }}
       </h4>
+    </div>
 
-      <!-- Stats -->
-      <div class="flex items-center gap-2 text-sm md:justify-end">
-        <p class="text-gray-500 dark:text-gray-400 text-xs">Portions:</p>
-        <p class="font-semibold text-green-600">
-          {{ step.portions }}
-        </p>
+    <!-- Contenu -->
+    <div class="space-y-2">
+      <!-- Date -->
+      <div class="flex items-center gap-2 text-sm">
+        <UIcon name="i-lucide-calendar" class="w-4 h-4 text-gray-400" />
+        <span class="text-gray-500 dark:text-gray-400">
+          {{ formatDateTime(step.created_at) }}
+        </span>
+      </div>
 
-        <p class="text-gray-500 dark:text-gray-400 text-xs">Quantité:</p>
-        <p class="font-semibold text-gray-900 dark:text-white">
-          {{ step.quantity }}
-          {{ unit || "kg" }}
-        </p>
+      <!-- Stats en grille -->
+      <div class="grid grid-cols-2 gap-3">
+        <!-- Portions -->
+        <div class="bg-green-50 dark:bg-green-900/20 p-2 rounded-lg text-center">
+          <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Portions</p>
+          <p class="text-lg font-bold text-green-600">
+            {{ step.portions }}
+          </p>
+        </div>
+
+        <!-- Quantité -->
+        <div class="bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg text-center">
+          <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Quantité</p>
+          <p class="text-lg font-bold text-gray-900 dark:text-white">
+            {{ step.quantity }} {{ unit || "kg" }}
+          </p>
+        </div>
       </div>
     </div>
   </div>
