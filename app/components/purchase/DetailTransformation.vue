@@ -4,6 +4,7 @@
     <template #header>
       <div class="flex items-center justify-between">
         <SectionHeader title="Transformation" />
+        <UButton size="sm" @click="edit = !edit">Modifier</UButton>
       </div>
     </template>
 
@@ -11,79 +12,49 @@
     <Loading v-if="loading" />
 
     <!-- // Show this if there's no transformation -->
-    <div v-else-if="!transformation" class="py-6">
-      <UEmpty
-        icon="i-lucide-file"
-        title="Aucune transformation enregistrée"
-        description="Commencez par en créer une pour suivre l'évolution de vos produits"
-      >
-        <template #actions>
-          <UButton
-            icon="i-lucide-plus"
-            variant="subtle"
-            :to="`/transformations/add/${purchaseId}`"
-            >Commencez la transformation</UButton
-          >
-        </template>
-      </UEmpty>
+    <div v-else-if="!transformation" class="space-y-4">
+      <p class="text-gray-500 dark:text-gray-400">
+        Aucune transformation n'a été effectuée pour cet achat.
+      </p>
+      <PurchaseTransformationAdd :purchase="purchase" />
     </div>
 
     <!-- // Show this is there's transformation -->
     <div v-else class="space-y-3">
-      <div class="flex">
-        <UButton
-          :to="`/transformations/${transformation.id}`"
-          size="sm"
-          color="neutral"
-          variant="ghost"
-          icon="i-heroicons-eye"
-          label="Détails"
-        />
-      </div>
-
       <!-- // Show the transformation metrics -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div
-          v-for="(metric, index) in transformationMetrics"
-          :key="index"
-          class="bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 rounded-xl p-4 transition-all hover:shadow-sm"
-        >
-          <MetricsWithBadge
-            :title="metric.title"
-            :value="metric.value"
-            :badge-value="metric.badgeValue"
-            :color="metric.color"
-          />
-        </div>
-      </div>
-    </div>
+      <PurchaseTransformationEdit
+        v-if="edit"
+        :transformation="transformation"
+        :unit="transformation.unit"
+      />
 
-    <!-- // Button to add new transformation -->
-    <template #footer v-if="transformation">
-      <UModal
-        title="Nouvelle Étape"
-        description="Ajouter une étape de transformation"
-      >
-        <UButton
-          color="primary"
-          variant="outline"
-          block
-          icon="i-heroicons-plus"
-          label="Nouvelle transformation"
-        />
-        <template #content>
-          <TransformationStepAdd :transformation="transformation" />
-        </template>
-      </UModal>
-    </template>
+      <PurchaseTransformationDetail
+        v-else
+        :transformation="transformation"
+        :unit="transformation.unit"
+      />
+
+      <!-- // container to add new transformation -->
+      <div class="mt-2 p-2 rounded-md bg-gray-50 dark:bg-gray-800/50">
+        <h2 class="font-bold">Ajoutez des transformations</h2>
+        <PurchaseTransformationAddStep :transformation="transformation" />
+      </div>
+
+      <PurchaseTransformationList
+        :transformation="transformation"
+        :transformation-id="transformation.id"
+      />
+    </div>
   </UCard>
 </template>
 
 <script setup lang="ts">
+import type { PurchaseItem } from "~/types/purchase";
 import type { Transformation } from "~/types/transformation";
 
 const props = defineProps<{
   purchaseId: string;
+  purchase: PurchaseItem;
 }>();
 const quantityReceived = defineModel("quantityReceived");
 const quantityUsed = defineModel("quantityUsed");
@@ -116,16 +87,12 @@ const transformationMetrics = computed(() => {
     },
   ];
 });
+
+const edit = ref(false);
 const loading = ref(true);
 
 // initialise the requests instance
 const { get, delete: del } = useApi();
-
-// Calcul du taux de déchet
-const getWasteRate = (t: Transformation) => {
-  if (!t.quantity_received) return 0;
-  return Math.round((t.waste_quantity / t.quantity_received) * 100);
-};
 
 async function loadTransformation() {
   // 1. Chargement des transformations
