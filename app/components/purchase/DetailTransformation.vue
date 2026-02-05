@@ -20,12 +20,13 @@
     </div>
 
     <!-- // Show this is there's transformation -->
-    <div v-else class="space-y-3">
+    <div v-if="transformation" class="space-y-3">
       <!-- // Show the transformation metrics -->
       <PurchaseTransformationEdit
         v-if="edit"
         :transformation="transformation"
         :unit="transformation.unit"
+        @cancel="edit = false"
       />
 
       <PurchaseTransformationDetail
@@ -35,15 +36,20 @@
       />
 
       <!-- // container to add new transformation -->
-      <div class="mt-2 p-2 rounded-md bg-gray-50 dark:bg-gray-800/50">
+      <div v-if="transformation.remaining_quantity > 0" class="mt-2 p-2 rounded-md bg-gray-50 dark:bg-gray-800/50">
         <h2 class="font-bold">Ajoutez des transformations</h2>
         <PurchaseTransformationAddStep :transformation="transformation" />
+      </div>
+      <div v-else class="text-primary text-center text-sm">
+        Vous ne pouvez plus ajouter de transformation pour ce achat
       </div>
 
       <PurchaseTransformationList
         :transformation="transformation"
         :transformation-id="transformation.id"
       />
+
+      <PurchaseTransformationFooter :transformation="transformation" />
     </div>
   </UCard>
 </template>

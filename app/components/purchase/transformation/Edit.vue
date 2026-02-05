@@ -64,11 +64,12 @@
 
 <script setup lang="ts">
 import { z } from "zod";
-import type { TransformationSummary } from "~/types/transformation";
+import type { Transformation } from "~/types/transformation";
 import type { FormSubmitEvent } from "#ui/types";
 
 const props = defineProps<{
-  transformation: TransformationSummary;
+  transformation: Transformation;
+  unit: string
 }>();
 
 const emit = defineEmits<{
@@ -80,8 +81,6 @@ const { put } = useApi();
 const toast = useToast();
 const loading = ref(false);
 
-const unit = computed(() => props.transformation.unit);
-
 const schema = z.object({
   quantity_received: z.coerce.number().min(0.01, "Minimum 0.01"),
   waste_quantity: z.coerce.number().min(0, "Minimum 0"),
@@ -91,8 +90,7 @@ type Schema = z.infer<typeof schema>;
 
 const state = reactive<Schema>({
   quantity_received: props.transformation.quantity_received,
-  waste_quantity: props.transformation.waste_quantity,
-  notes: props.transformation.notes || "",
+  waste_quantity: props.transformation.waste_quantity,  
 });
 
 const usableQuantity = computed(() => {
@@ -136,12 +134,11 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       color: "success",
     });
 
-    emit("saved", response);
+    window.location.reload()
   } catch (error: any) {
     toast.add({
       title: "Erreur",
-      description:
-        error?.response?._data?.message || "Erreur lors de la modification",
+      description: "Erreur lors de la modification",
       color: "error",
     });
   } finally {
