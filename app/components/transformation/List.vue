@@ -51,7 +51,7 @@
             :key="step.id"
             :step="step"
             :step-number="index + 1"
-            :unit="unit"
+            :unit="transformation.unit"
           />
         </div>
       </div>

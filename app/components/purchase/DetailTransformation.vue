@@ -66,12 +66,8 @@ import type { PurchaseItem } from "~/types/purchase";
 import type { Transformation } from "~/types/transformation";
 
 const props = defineProps<{
-  purchaseId: string;
   purchase: PurchaseItem;
 }>();
-const quantityReceived = defineModel("quantityReceived");
-const quantityUsed = defineModel("quantityUsed");
-const quantityRemaining = defineModel("quantityRemaining");
 
 //variables to store the transformation
 const transformation = ref<Transformation | undefined | null>();
@@ -89,11 +85,8 @@ async function loadTransformation() {
   transformation.value = null;
   try {
     transformation.value = await get<Transformation>(
-      `/transformations/purchase/${props.purchaseId}`,
+      `/transformations/purchase/${props.purchase.id}`,
     );
-    quantityReceived.value = transformation.value.quantity_received;
-    quantityUsed.value = transformation.value.total_quantity_used;
-    quantityRemaining.value = transformation.value.remaining_quantity;
   } catch (error) {
     console.log(error);
   } finally {
