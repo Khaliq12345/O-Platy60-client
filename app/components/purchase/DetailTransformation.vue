@@ -16,7 +16,7 @@
       <p class="text-gray-500 dark:text-gray-400">
         Aucune transformation n'a été effectuée pour cet achat.
       </p>
-      <TransformationAdd :purchase="purchase" />
+      <TransformationAdd :purchase="purchase" @added="loadTransformation" />
     </div>
 
     <!-- // Show this is there's transformation -->
@@ -26,6 +26,7 @@
         v-if="edit"
         :transformation="transformation"
         :purchase="purchase"
+        @edited="loadTransformation"
         @cancel="edit = false"
       />
 
@@ -36,9 +37,15 @@
       />
 
       <!-- // container to add new transformation -->
-      <div v-if="transformation.remaining_quantity > 0" class="mt-2 p-2 rounded-md bg-gray-50 dark:bg-gray-800/50">
+      <div
+        v-if="transformation.remaining_quantity > 0"
+        class="mt-2 p-2 rounded-md bg-gray-50 dark:bg-gray-800/50"
+      >
         <h2 class="font-bold">Ajoutez des transformations</h2>
-        <TransformationStepAdd :transformation="transformation" />
+        <TransformationStepAdd
+          :transformation="transformation"
+          @added="loadTransformation"
+        />
       </div>
       <div v-else class="text-primary text-center text-sm">
         Vous ne pouvez plus ajouter de transformation pour ce achat
@@ -67,32 +74,7 @@ const quantityUsed = defineModel("quantityUsed");
 const quantityRemaining = defineModel("quantityRemaining");
 
 //variables to store the transformation
-const transformation = ref<Transformation | undefined>();
-const transformationMetrics = computed(() => {
-  // Shortcut to the value for cleaner code
-  const t = transformation.value;
-
-  return [
-    {
-      title: "Reçu",
-      value: t?.quantity_received?.toLocaleString(),
-      badgeValue: t?.unit || "kg",
-      color: "gray",
-    },
-    {
-      title: "Utilisable",
-      value: t?.quantity_usable?.toLocaleString(),
-      badgeValue: t?.unit || "kg",
-      color: "green", // Keeping green from your HTML, or change to "gray" if preferred
-    },
-    {
-      title: "Déchet",
-      value: t?.waste_quantity?.toLocaleString(),
-      badgeValue: t?.unit || "kg",
-      color: (t?.waste_quantity ?? 0) > 0 ? "orange" : "gray",
-    },
-  ];
-});
+const transformation = ref<Transformation | undefined | null>();
 
 const edit = ref(false);
 const loading = ref(true);
@@ -103,6 +85,8 @@ const { get, delete: del } = useApi();
 async function loadTransformation() {
   // 1. Chargement des transformations
   loading.value = true;
+  edit.value = false;
+  transformation.value = null;
   try {
     transformation.value = await get<Transformation>(
       `/transformations/purchase/${props.purchaseId}`,

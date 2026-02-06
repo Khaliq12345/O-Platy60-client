@@ -1,20 +1,23 @@
 <template>
-  <div id="loader-container" class="flex items-center justify-center w-full h-full">
+  <div
+    id="loader-container"
+    class="flex items-center justify-center w-full h-full"
+  >
     <div id="floating-o" class="text-center">
-      <p class="text-primary font-bold text-3xl">O-Platy</p>
+      <p class="text-primary font-bold text-3xl">O-Platy-60</p>
       <p class="text-sm">Chargement</p>
     </div>
   </div>
 </template>
 
 <style scoped>
-
 #floating-o {
   animation: float 3s ease-in-out infinite;
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(0, 0) rotate(0deg);
   }
   20% {
