@@ -5,16 +5,18 @@
       class="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg transition-colors group"
     >
       <div class="flex items-center gap-3">
-        <h3 class="text-md md:text-lg font-semibold text-gray-900 dark:text-white">
+        <h3
+          class="text-md md:text-lg font-semibold text-gray-900 dark:text-white"
+        >
           Transformations Effectuées
         </h3>
-        
+
         <!-- Badge compteur -->
-        <UBadge 
-          v-if="!loading" 
-          :label="steps.length.toString()" 
-          color="primary" 
-          size="sm" 
+        <UBadge
+          v-if="!loading"
+          :label="steps.length.toString()"
+          color="primary"
+          size="sm"
           variant="soft"
         />
       </div>
@@ -35,13 +37,16 @@
         </div>
 
         <!-- Liste vide -->
-        <div v-else-if="steps.length === 0" class="text-center py-4 text-gray-500 text-sm">
+        <div
+          v-else-if="steps.length === 0"
+          class="text-center py-4 text-gray-500 text-sm"
+        >
           Aucune transformation effectuée
         </div>
 
         <!-- Liste -->
         <div v-else class="space-y-2 px-2">
-          <PurchaseTransformationStep
+          <TransformationStepCard
             v-for="(step, index) in steps"
             :key="step.id"
             :step="step"

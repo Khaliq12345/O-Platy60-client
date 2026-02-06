@@ -30,10 +30,10 @@
   </div>
 </template>
 <script setup lang="ts">
-import type { TransformationSummary } from "~/types/transformation";
+import type { Transformation } from "~/types/transformation";
 
 const props = defineProps<{
-  transformation?: TransformationSummary | null;
+  transformation?: Transformation | null;
   unit?: string;
 }>();
 

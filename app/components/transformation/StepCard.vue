@@ -1,5 +1,7 @@
 <template>
-  <div class="space-y-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-lg p-4">
+  <div
+    class="space-y-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-lg p-4"
+  >
     <!-- Header -->
     <div class="flex items-center gap-3 mb-3">
       <!-- Numéro d'étape -->
@@ -18,17 +20,19 @@
     <!-- Contenu -->
     <div class="space-y-2">
       <!-- Date -->
-      <div class="flex items-center gap-2 text-sm">
-        <UIcon name="i-lucide-calendar" class="w-4 h-4 text-gray-400" />
-        <span class="text-gray-500 dark:text-gray-400">
-          {{ formatDateTime(step.created_at) }}
-        </span>
-      </div>
+      <MetricsWithIcon
+        title="Date"
+        :value="formatDateTime(step.created_at)"
+        icon="i-lucide-calendar"
+        direction="vertical"
+      />
 
       <!-- Stats en grille -->
       <div class="grid grid-cols-2 gap-3">
         <!-- Portions -->
-        <div class="bg-green-50 dark:bg-green-900/20 p-2 rounded-lg text-center">
+        <div
+          class="bg-green-50 dark:bg-green-900/20 p-2 rounded-lg text-center"
+        >
           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Portions</p>
           <p class="text-lg font-bold text-green-600">
             {{ step.portions }}

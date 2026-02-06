@@ -66,10 +66,11 @@
 import { z } from "zod";
 import type { Transformation } from "~/types/transformation";
 import type { FormSubmitEvent } from "#ui/types";
+import { weightFormat } from "~/utils/weightFormat";
 
 const props = defineProps<{
   transformation: Transformation;
-  unit: string
+  unit: string;
 }>();
 
 const emit = defineEmits<{
@@ -90,27 +91,11 @@ type Schema = z.infer<typeof schema>;
 
 const state = reactive<Schema>({
   quantity_received: props.transformation.quantity_received,
-  waste_quantity: props.transformation.waste_quantity,  
+  waste_quantity: props.transformation.waste_quantity,
 });
 
 const usableQuantity = computed(() => {
   return Math.max(0, state.quantity_received - state.waste_quantity);
-});
-
-const unitMapping: Record<string, string> = {
-  kg: "kilogram",
-  g: "gram",
-  l: "liter",
-  ml: "milliliter",
-  m: "meter",
-  cm: "centimeter",
-  unit: "unit",
-};
-
-const weightFormat = (unit: string) => ({
-  style: "unit",
-  unit: unitMapping[unit] || "kilogram",
-  unitDisplay: "short",
 });
 
 const onSubmit = async (event: FormSubmitEvent<Schema>) => {
@@ -134,7 +119,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       color: "success",
     });
 
-    window.location.reload()
+    window.location.reload();
   } catch (error: any) {
     toast.add({
       title: "Erreur",
