@@ -25,7 +25,7 @@
       <TransformationEdit
         v-if="edit"
         :transformation="transformation"
-        :unit="transformation.unit"
+        :purchase="purchase"
         @cancel="edit = false"
       />
 

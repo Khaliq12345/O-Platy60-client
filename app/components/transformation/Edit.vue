@@ -10,8 +10,9 @@
             v-model="state.quantity_received"
             :step="0.01"
             :min="0.01"
+            :max="purchase?.quantity"
             class="w-full"
-            :format-options="weightFormat(unit)"
+            :format-options="weightFormat(transformation.unit)"
           />
         </UFormField>
 
@@ -22,7 +23,7 @@
             disabled
             :step="0.01"
             class="w-full"
-            :format-options="weightFormat(unit)"
+            :format-options="weightFormat(transformation.unit)"
           />
         </UFormField>
 
@@ -33,7 +34,7 @@
             :step="0.01"
             :min="0"
             class="w-full"
-            :format-options="weightFormat(unit)"
+            :format-options="weightFormat(transformation.unit)"
           />
         </UFormField>
       </div>
@@ -65,12 +66,13 @@
 <script setup lang="ts">
 import { z } from "zod";
 import type { Transformation } from "~/types/transformation";
+import type { PurchaseItem } from "~/types/purchase";
 import type { FormSubmitEvent } from "#ui/types";
 import { weightFormat } from "~/utils/weightFormat";
 
 const props = defineProps<{
   transformation: Transformation;
-  unit: string;
+  purchase: PurchaseItem;
 }>();
 
 const emit = defineEmits<{
@@ -83,7 +85,10 @@ const toast = useToast();
 const loading = ref(false);
 
 const schema = z.object({
-  quantity_received: z.coerce.number().min(0.01, "Minimum 0.01"),
+  quantity_received: z.coerce
+    .number()
+    .min(0.01, "Minimum 0.01")
+    .max(props.purchase.quantity, "Inérieur ou égal à la quantité d'achat"),
   waste_quantity: z.coerce.number().min(0, "Minimum 0"),
 });
 
@@ -119,7 +124,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       color: "success",
     });
 
-    window.location.reload();
+    window.location.reload(); // to be emit
   } catch (error: any) {
     toast.add({
       title: "Erreur",

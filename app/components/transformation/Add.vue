@@ -69,11 +69,14 @@ const props = defineProps<{
 
 const { post } = useApi();
 const toast = useToast();
-const router = useRouter();
 const loading = ref(false);
 
 const schema = z.object({
-  quantity_received: z.coerce.number().min(0.01, "Minimum 0.01").default(0),
+  quantity_received: z.coerce
+    .number()
+    .min(0.01, "Minimum 0.01")
+    .max(props.purchase.quantity, "Inérieur ou égal à la quantité d'achat")
+    .default(0),
 
   waste_quantity: z.coerce.number().min(0, "Minimum 0").default(0),
 
@@ -144,7 +147,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       icon: "i-heroicons-check-circle",
     });
 
-    window.location.reload()
+    window.location.reload();
   } catch (error: any) {
     toast.add({
       title: "Erreur",
