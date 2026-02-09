@@ -9,21 +9,13 @@
       <div v-else-if="purchase" class="w-full md:p-6 p-2 overflow-scroll">
         <PurchaseDetailHeader
           :item-name="purchase?.item_name || ''"
-          :purchase-id="purchaseId"
-          ></PurchaseDetailHeader>
-          
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
-            <PurchaseDetailInfo
-            :purchase="purchase"
-          />
+          :purchase-id="purchaseId || ''"
+        ></PurchaseDetailHeader>
 
-          <PurchaseDetailTransformation
-            :purchase-id="purchaseId"
-            :purchase="purchase"
-            v-model:quantity-received="quantity_received"
-            v-model:quantity-used="quantity_used"
-            v-model:quantity-remaining="quantity_remaining"
-          />
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
+          <PurchaseDetailInfo :purchase="purchase" />
+
+          <PurchaseDetailTransformation :purchase="purchase" />
         </div>
       </div>
       <div v-else class="py-6">
@@ -39,10 +31,7 @@ import type { PurchaseItem } from "~/types/purchase";
 const route = useRoute();
 
 const purchaseId = route.params.id;
-const quantity_received = ref(0);
-const quantity_used = ref(0);
-const quantity_remaining = ref(0);
-const itemName = ref("");
+
 const { get } = useApi();
 
 const loading = ref(true);
@@ -64,7 +53,7 @@ async function loadPurchase() {
       icon: "i-heroicons-exclamation-circle",
     });
   }
-   loading.value = false;
+  loading.value = false;
 }
 
 onMounted(async () => {

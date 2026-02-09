@@ -1,5 +1,5 @@
 <template>
-  <UCard>
+  <div class="mt-2">
     <UTable
       v-model:expanded="expanded"
       :data="purchases"
@@ -61,7 +61,7 @@
         </div>
       </template>
     </UTable>
-  </UCard>
+  </div>
 </template>
 
 <script setup lang="ts">

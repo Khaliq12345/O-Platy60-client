@@ -34,17 +34,17 @@
 
       <div class="w-full flex items-center justify-center">
         <UButton
-        type="submit"
-        color="primary"
-        size="sm"
-        icon="i-heroicons-check-circle"
-        :loading="loading"
-        :disable="loading"
-        :class="loading ? 'animate-pulse' : ''"
+          type="submit"
+          color="primary"
+          size="sm"
+          icon="i-heroicons-check-circle"
+          :loading="loading"
+          :disable="loading"
+          :class="loading ? 'animate-pulse' : ''"
         >
-        {{ loading ? "Ajout..." : "Ajouter" }}
-      </UButton>
-    </div>
+          {{ loading ? "Ajout..." : "Ajouter" }}
+        </UButton>
+      </div>
     </UForm>
   </div>
 </template>
@@ -60,7 +60,7 @@ const props = defineProps<{
 
 const { post } = useApi();
 const toast = useToast();
-const router = useRouter();
+const emit = defineEmits<{ added: [] }>();
 
 // Schéma avec validation du stock max
 const schema = z.object({
@@ -90,7 +90,7 @@ const schema = z.object({
             : "Données de stock indisponibles";
         },
         path: ["quantity"],
-      }
+      },
     ),
 });
 
@@ -121,7 +121,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       icon: "i-heroicons-check-circle",
     });
 
-    window.location.reload();
+    emit("added");
   } catch (error: any) {
     toast.add({
       title: "Erreur",

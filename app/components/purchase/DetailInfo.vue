@@ -60,11 +60,6 @@ const metadataItems = computed(() => [
     value: formattedDate.value,
     icon: "i-heroicons-calendar-days",
   },
-  // {
-  //   title: "Créé par",
-  //   value: purchase.value?.created_by,
-  //   icon: "i-heroicons-user",
-  // },
 ]);
 
 const purchaseMetrics = computed(() => {
