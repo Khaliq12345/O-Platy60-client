@@ -50,7 +50,7 @@ const onSubmit = async (formData: {
       transformation_date: new Date().toISOString().split("T")[0],
       notes: formData.notes,
       purchase_id: props.purchase.id,
-      created_by: "42ad2622-23a6-4fce-91fd-4c1996bb2902",
+      created_by: props.purchase.created_by,
       unit: props.purchase.unit,
     };
 

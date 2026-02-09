@@ -60,7 +60,7 @@
       >
         Annuler
       </UButton>
-      
+
       <UButton
         type="submit"
         :color="submitColor"
@@ -93,12 +93,14 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  submit: [data: {
-    quantity_received: number;
-    quantity_usable: number;
-    waste_quantity: number;
-    notes?: string;
-  }];
+  submit: [
+    data: {
+      quantity_received: number;
+      quantity_usable: number;
+      waste_quantity: number;
+      notes?: string;
+    },
+  ];
   cancel: [];
 }>();
 
@@ -136,7 +138,7 @@ const weightFormat = (unit: string) => {
     cm: "centimeter",
     unit: "unit",
   };
-  
+
   return {
     style: "unit",
     unit: unitMapping[unit] || "kilogram",
@@ -146,21 +148,15 @@ const weightFormat = (unit: string) => {
 
 const onSubmit = async (event: FormSubmitEvent<Schema>) => {
   if (isSubmitting.value) return; // Double protection
-  
+
   isSubmitting.value = true;
-  
-  try {
-    await emit('submit', {
-      quantity_received: event.data.quantity_received,
-      quantity_usable: usableQuantity.value,
-      waste_quantity: event.data.waste_quantity,
-      notes: event.data.notes,
-    });
-  } finally {
-    // Le parent doit nous dire quand c'est fini via une prop ou on garde le verrou
-    // Option A: Le parent gère et on reset via watch
-    // Option B: On garde verrouillé jusqu'à ce que le parent reset
-  }
+
+  emit("submit", {
+    quantity_received: event.data.quantity_received,
+    quantity_usable: usableQuantity.value,
+    waste_quantity: event.data.waste_quantity,
+    notes: event.data.notes,
+  });
 };
 
 // Exposer pour que le parent puisse reset le loading
