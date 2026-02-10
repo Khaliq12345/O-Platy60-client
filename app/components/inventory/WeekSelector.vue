@@ -1,39 +1,39 @@
 <template>
   <div class="space-y-2">
-    <!-- Header -->
     <div class="flex items-center justify-between px-1">
       <UButton color="neutral" variant="ghost" icon="i-lucide-chevron-left" size="xs" @click="previousMonth" />
       <span class="text-sm font-medium">{{ monthLabel }}</span>
       <UButton color="neutral" variant="ghost" icon="i-lucide-chevron-right" size="xs" @click="nextMonth" />
     </div>
 
-    <!-- Semaines en ligne sur mobile, colonne sur desktop -->
-    <div class="w-full flex justify-center items-center gap-1 overflow-x-auto lg:overflow-visible pb-2">
+    <div class="flex justify-center items-center gap-1 overflow-x-auto pb-2">
       <UButton
         v-for="week in weeks"
         :key="week.number"
         :color="selectedWeek === week.number ? 'primary' : 'neutral'"
         :variant="selectedWeek === week.number ? 'soft' : 'ghost'"
         size="sm"
-        class="whitespace-nowrap lg:w-full lg:justify-start"
+        class="whitespace-nowrap"
         @click="selectWeek(week)"
       >
-      
-        <span class="font-mono text-xs lg:text-sm">S{{ week.number }}</span>
+        <span class="font-mono text-xs">S{{ week.number }}</span>
         <span class="hidden lg:inline text-xs text-gray-500 ml-2">{{ week.start }} - {{ week.end }}</span>
       </UButton>
     </div>
   </div>
 </template>
+
 <script setup lang="ts">
 interface Week {
   number: number;
   start: string;
   end: string;
+  start_date: string;
+  end_date: string;
 }
 
 const emit = defineEmits<{
-  select: [week: Week];
+  select: [week: { number: number; start_date: string; end_date: string }];
 }>();
 
 const currentDate = ref(new Date());
@@ -56,7 +56,6 @@ const weeks = computed((): Week[] => {
   const weeks: Week[] = [];
   let current = new Date(firstDay);
   
-  // Aller au premier lundi
   while (current.getDay() !== 1) {
     current.setDate(current.getDate() - 1);
   }
@@ -68,12 +67,13 @@ const weeks = computed((): Week[] => {
     const end = new Date(current);
     end.setDate(end.getDate() + 6);
     
-    // Vérifier si la semaine intersecte le mois
     if (end >= firstDay && start <= lastDay) {
       weeks.push({
         number: weekNum,
         start: formatDate(start),
-        end: formatDate(end)
+        end: formatDate(end),
+        start_date: formatDateISO(start),
+        end_date: formatDateISO(end)
       });
       weekNum++;
     }
@@ -89,6 +89,10 @@ function formatDate(date: Date): string {
     day: '2-digit',
     month: '2-digit'
   });
+}
+
+function formatDateISO(date: Date): string {
+  return date.toISOString().split('T')[0];
 }
 
 function previousMonth() {
@@ -109,19 +113,27 @@ function nextMonth() {
 
 function selectWeek(week: Week) {
   selectedWeek.value = week.number;
-  emit('select', week);
+  emit('select', {
+    number: week.number,
+    start_date: week.start_date,
+    end_date: week.end_date
+  });
 }
 
-// Sélectionner semaine courante au montage
 onMounted(() => {
   const today = new Date();
   const currentWeek = weeks.value.find(w => {
-    const start = new Date(w.start.split('/').reverse().join('-'));
-    const end = new Date(w.end.split('/').reverse().join('-'));
+    const start = new Date(w.start_date);
+    const end = new Date(w.end_date);
     return today >= start && today <= end;
   });
   if (currentWeek) {
     selectedWeek.value = currentWeek.number;
+    emit('select', {
+      number: currentWeek.number,
+      start_date: currentWeek.start_date,
+      end_date: currentWeek.end_date
+    });
   }
 });
 </script>

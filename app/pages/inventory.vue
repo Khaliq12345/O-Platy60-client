@@ -6,15 +6,13 @@
 
     <template #body>
       <div class="p-4 lg:p-6 space-y-4 lg:space-y-6">
-        <!-- Header avec filtres -->
         <div class="flex flex-col gap-4">
           <InventoryHeader />
           <InventoryAdd />
           
-          <Filters
-            v-model:searchQuery="searchQuery"
-            v-model:dateRange="dateRange"
-            @filter="handleFilter"
+          <InventoryFilters
+            @search="handleSearch"
+            @week-select="handleWeekSelect"
           />
         </div>
 
@@ -22,7 +20,6 @@
 
         <div v-else>
           <div class="space-y-4">
-            <InventoryWeekSelector @select="handleWeekSelect" />
             <InventoryRow
               v-for="(item, index) in inventoryItems"
               :key="item.inventory_id"
@@ -39,8 +36,8 @@
             :page="query.page"
             :limit="query.limit"
             :total="query.total"
-            @change-page="(val: number) => { query.page = val; handleFilter(); }"
-            @change-limit="(val: any) => { query.limit = val.limit; query.page = val.page; handleFilter(); }"
+            @change-page="(val: number) => { query.page = val; loadInventoryData(); }"
+            @change-limit="(val: any) => { query.limit = val.limit; query.page = val.page; loadInventoryData(); }"
           />
         </div>
       </div>
@@ -50,7 +47,6 @@
 
 <script setup lang="ts">
 import type { Inventory, InventoriesResponse } from "~/types/inventory";
-import { CalendarDate, today, getLocalTimeZone } from "@internationalized/date";
 
 const { get } = useApi();
 const toast = useToast();
@@ -58,18 +54,14 @@ const toast = useToast();
 const loading = ref(true);
 const inventoryItems = ref<Inventory[]>([]);
 const weeklyData = ref<DayValue[][]>([]);
-const searchQuery = ref("");
 
 const query = ref({
   page: 1,
   limit: 5,
   total: 0,
-});
-
-const now = today(getLocalTimeZone());
-const dateRange = ref({
-  start: new CalendarDate(now.year, 1, 1).toString(),
-  end: now.add({ years: 1 }).toString(),
+  search: '',
+  start_date: '',
+  end_date: '',
 });
 
 interface DayValue {
@@ -83,6 +75,7 @@ const emptyWeek = (): DayValue[] => Array(7).fill(null).map(emptyDay);
 const loadInventoryData = async () => {
   try {
     loading.value = true;
+    
     const response = await get<InventoriesResponse>("/inventories", query.value);
     const items = response?.inventories ?? [];
     inventoryItems.value = items;
@@ -101,22 +94,17 @@ const loadInventoryData = async () => {
   }
 };
 
-function handleFilter() {
-  query.value = {
-    ...query.value,
-    search: searchQuery.value,
-    start_date: dateRange.value.start,
-    end_date: dateRange.value.end,
-  };
+function handleSearch(search: string) {
+  query.value.search = search;
+  query.value.page = 1;
   loadInventoryData();
 }
 
-function handleWeekSelect(week: { weekNumber: number; start: CalendarDate; end: CalendarDate }) {
-  console.log('Semaine sélectionnée:', week);
-  // Charger les données pour cette semaine
-  // query.value.start_date = week.start.toString();
-  // query.value.end_date = week.end.toString();
-  // loadInventoryData();
+function handleWeekSelect(week: { number: number; start_date: string; end_date: string }) {
+  query.value.start_date = week.start_date;
+  query.value.end_date = week.end_date;
+  query.value.page = 1;
+  loadInventoryData();
 }
 
 onMounted(() => {
