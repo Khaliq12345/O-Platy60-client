@@ -5,13 +5,22 @@
     </template>
 
     <template #body>
-      <div class="p-6 space-y-6">
-        <InventoryHeader />
-        <InventoryAdd />
+      <div class="p-4 lg:p-6 space-y-4 lg:space-y-6">
+        <!-- Header avec filtres -->
+        <div class="flex flex-col gap-4">
+          <InventoryHeader />
+          <InventoryAdd />
+          
+          <Filters
+            v-model:searchQuery="searchQuery"
+            v-model:dateRange="dateRange"
+            @filter="handleFilter"
+          />
+        </div>
 
         <Loading v-if="loading" />
 
-        <template v-else>
+        <div v-else>
           <div class="space-y-4">
             <InventoryRow
               v-for="(item, index) in inventoryItems"
@@ -29,10 +38,10 @@
             :page="query.page"
             :limit="query.limit"
             :total="query.total"
-            @change-page="(val: number) => { query.page = val; loadInventoryData(); }"
-            @change-limit="(val: any) => { query.limit = val.limit; query.page = val.page; loadInventoryData(); }"
+            @change-page="(val: number) => { query.page = val; handleFilter(); }"
+            @change-limit="(val: any) => { query.limit = val.limit; query.page = val.page; handleFilter(); }"
           />
-        </template>
+        </div>
       </div>
     </template>
   </UDashboardPanel>
@@ -40,37 +49,45 @@
 
 <script setup lang="ts">
 import type { Inventory, InventoriesResponse } from "~/types/inventory";
+import { CalendarDate, today, getLocalTimeZone } from "@internationalized/date";
+
+const { get } = useApi();
+const toast = useToast();
+
+const loading = ref(true);
+const inventoryItems = ref<Inventory[]>([]);
+const weeklyData = ref<DayValue[][]>([]);
+const searchQuery = ref("");
+
+const query = ref({
+  page: 1,
+  limit: 5,
+  total: 0,
+});
+
+const now = today(getLocalTimeZone());
+const dateRange = ref({
+  start: new CalendarDate(now.year, 1, 1).toString(),
+  end: now.add({ years: 1 }).toString(),
+});
 
 interface DayValue {
   entries: number | null;
   sales: number | null;
 }
 
-const { get } = useApi();
-const toast = useToast();
-
-const inventoryItems = ref<Inventory[]>([]);
-const weeklyData = ref<DayValue[][]>([]);
-const loading = ref(true);
-
-const query = ref({
-  page: 1,
-  limit: 5, // Moins de produits par page pour plus d'espace
-  total: 0,
-});
-
 const emptyDay = (): DayValue => ({ entries: null, sales: null });
 const emptyWeek = (): DayValue[] => Array(7).fill(null).map(emptyDay);
 
-async function loadInventoryData() {
-  loading.value = true;
+const loadInventoryData = async () => {
   try {
+    loading.value = true;
     const response = await get<InventoriesResponse>("/inventories", query.value);
     const items = response?.inventories ?? [];
     inventoryItems.value = items;
     weeklyData.value = items.map(() => emptyWeek());
     query.value.total = response?.count ?? 0;
-  } catch (error) {
+  } catch (error: any) {
     toast.add({
       title: "Erreur",
       description: "Impossible de charger les inventaires",
@@ -81,6 +98,16 @@ async function loadInventoryData() {
   } finally {
     loading.value = false;
   }
+};
+
+function handleFilter() {
+  query.value = {
+    ...query.value,
+    search: searchQuery.value,
+    start_date: dateRange.value.start,
+    end_date: dateRange.value.end,
+  };
+  loadInventoryData();
 }
 
 onMounted(() => {
