@@ -22,6 +22,7 @@
 
         <div v-else>
           <div class="space-y-4">
+            <InventoryWeekSelector @select="handleWeekSelect" />
             <InventoryRow
               v-for="(item, index) in inventoryItems"
               :key="item.inventory_id"
@@ -108,6 +109,14 @@ function handleFilter() {
     end_date: dateRange.value.end,
   };
   loadInventoryData();
+}
+
+function handleWeekSelect(week: { weekNumber: number; start: CalendarDate; end: CalendarDate }) {
+  console.log('Semaine sélectionnée:', week);
+  // Charger les données pour cette semaine
+  // query.value.start_date = week.start.toString();
+  // query.value.end_date = week.end.toString();
+  // loadInventoryData();
 }
 
 onMounted(() => {

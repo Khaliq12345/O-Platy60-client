@@ -1,7 +1,13 @@
 <template>
-  <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-    <div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
-      <h3 class="font-semibold text-lg text-gray-900 dark:text-white">{{ item.name }}</h3>
+  <div
+    class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden"
+  >
+    <div
+      class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800"
+    >
+      <h3 class="font-semibold text-lg text-gray-900 dark:text-white">
+        {{ item.name }}
+      </h3>
       <UButton
         color="neutral"
         variant="soft"
@@ -13,17 +19,23 @@
 
     <div class="p-4 grid grid-cols-7 gap-4">
       <div v-for="(day, index) in days" :key="index" class="text-center">
-        <div class="text-xs font-medium text-gray-500 uppercase mb-2">{{ shortDays[index] }}</div>
-        
+        <div class="text-xs font-medium text-gray-500 uppercase mb-2">
+          {{ shortDays[index] }}
+        </div>
+
         <div class="space-y-2">
-          <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-2">
-            <div class="text-[10px] text-gray-400 uppercase mb-1">Entrées</div>
-            <p class="font-medium text-gray-900 dark:text-gray-100">{{ day?.entries ?? '—' }}</p>
-          </div>
-          
+          <Metric label="Entrées" value="--" />
+
           <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-2">
             <div class="text-[10px] text-gray-400 uppercase mb-1">Ventes</div>
-            <UInputNumber v-model="day.sales" :min="0" size="sm" placeholder="—" class="w-full" />
+            <UInputNumber
+              v-model="day.sales"
+              :min="0"
+              size="sm"
+              placeholder="—"
+              class="w-full"
+              @blur="console.log('leave with value', day.sales)"
+            />
           </div>
         </div>
       </div>
@@ -34,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Inventory } from '~/types/inventory';
+import type { Inventory } from "~/types/inventory";
 
 interface DayValue {
   entries: number | null;
