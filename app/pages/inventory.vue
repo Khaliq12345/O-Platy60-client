@@ -21,10 +21,11 @@
         <div v-else>
           <div class="space-y-4">
             <InventoryRow
-              v-for="(item, index) in inventoryItems"
+              v-for="item in inventoryItems"
               :key="item.inventory_id"
               :item="item"
-              :days="weeklyData[index]"
+              :days="getDaysForInventory(item.inventory_id)"
+              @transaction-updated="reloadInventoryTransactions"
             />
           </div>
 
@@ -36,8 +37,8 @@
             :page="query.page"
             :limit="query.limit"
             :total="query.total"
-            @change-page="(val: number) => { query.page = val; loadInventoryData(); }"
-            @change-limit="(val: any) => { query.limit = val.limit; query.page = val.page; loadInventoryData(); }"
+            @change-page="(val: number) => { query.page = val; loadInventories(); }"
+            @change-limit="(val: any) => { query.limit = val.limit; query.page = val.page; loadInventories(); }"
           />
         </div>
       </div>
@@ -46,68 +47,133 @@
 </template>
 
 <script setup lang="ts">
-import type { Inventory, InventoriesResponse } from "~/types/inventory";
+import { addDays, format } from 'date-fns';
+import type { 
+  Inventory, 
+  InventoriesResponse, 
+  InventoryTransaction,
+  DayData 
+} from "~/types/inventory";
 
 const { get } = useApi();
-const toast = useToast();
 
 const loading = ref(true);
 const inventoryItems = ref<Inventory[]>([]);
-const weeklyData = ref<DayValue[][]>([]);
+const transactions = ref<Record<string, InventoryTransaction[]>>({});
+const currentWeek = ref<{ start_date: string; end_date: string } | null>(null);
 
 const query = ref({
   page: 1,
   limit: 5,
   total: 0,
   search: '',
-  start_date: '',
-  end_date: '',
 });
 
-interface DayValue {
-  entries: number | null;
-  sales: number | null;
-}
+// Génère les 7 jours de la semaine à partir du start_date (lundi)
+const weekDays = computed((): DayData[] => {
+  if (!currentWeek.value) return [];
+  
+  const days: DayData[] = [];
+  const start = new Date(currentWeek.value.start_date + 'T12:00:00'); // Midi pour éviter les problèmes de timezone
+  
+  for (let i = 0; i < 7; i++) {
+    const date = addDays(start, i);
+    days.push({
+      date: format(date, 'yyyy-MM-dd'),
+      entry: 0,
+      sale: 0,
+    });
+  }
+  
+  return days;
+});
 
-const emptyDay = (): DayValue => ({ entries: null, sales: null });
-const emptyWeek = (): DayValue[] => Array(7).fill(null).map(emptyDay);
-
-const loadInventoryData = async () => {
+async function loadInventories() {
   try {
     loading.value = true;
+    const params: any = { ...query.value };
+    if (!params.search) delete params.search;
     
-    const response = await get<InventoriesResponse>("/inventories", query.value);
-    const items = response?.inventories ?? [];
-    inventoryItems.value = items;
-    weeklyData.value = items.map(() => emptyWeek());
+    const response = await get<InventoriesResponse>("/inventories", params);
+    inventoryItems.value = response?.inventories ?? [];
     query.value.total = response?.count ?? 0;
-  } catch (error: any) {
-    toast.add({
-      title: "Erreur",
-      description: "Impossible de charger les inventaires",
-      color: "error",
-    });
+    
+    if (currentWeek.value) {
+      await loadAllTransactions();
+    }
+  } catch (error) {
     inventoryItems.value = [];
-    weeklyData.value = [];
   } finally {
     loading.value = false;
   }
 };
 
+async function loadAllTransactions() {
+  if (!currentWeek.value) return;
+  
+  const { start_date, end_date } = currentWeek.value;
+  
+  for (const item of inventoryItems.value) {
+    try {
+      const txs = await get<InventoryTransaction[]>(
+        `/inventories/${item.inventory_id}/transactions`,
+        { start_date, end_date }
+      );
+      transactions.value[item.inventory_id] = txs ?? [];
+    } catch (error) {
+      transactions.value[item.inventory_id] = [];
+    }
+  }
+};
+
+async function reloadInventoryTransactions(inventoryId: string)  {
+  if (!currentWeek.value) return;
+  
+  try {
+    const txs = await get<InventoryTransaction[]>(
+      `/inventories/${inventoryId}/transactions`,
+      { 
+        start_date: currentWeek.value.start_date, 
+        end_date: currentWeek.value.end_date 
+      }
+    );
+    transactions.value[inventoryId] = txs ?? [];
+  } catch (error) {
+    // Silencieux
+  }
+};
+
+function getDaysForInventory(inventoryId: string): DayData[] {
+  const inventoryTxs = transactions.value[inventoryId] ?? [];
+  
+  return weekDays.value.map(day => {
+    // Comparer les dates sans tenir compte du timezone
+    const tx = inventoryTxs.find(t => {
+      const txDate = t.created_at.substring(0, 10); // "2026-02-10"
+      return txDate === day.date;
+    });
+    
+    return {
+      ...day,
+      entry: tx?.entry ?? 0,
+      sale: tx?.sale ?? 0,
+      transactionId: tx?.id,
+    };
+  });
+};
+
 function handleSearch(search: string) {
   query.value.search = search;
   query.value.page = 1;
-  loadInventoryData();
-}
+  loadInventories();
+};
 
-function handleWeekSelect(week: { number: number; start_date: string; end_date: string }) {
-  query.value.start_date = week.start_date;
-  query.value.end_date = week.end_date;
-  query.value.page = 1;
-  loadInventoryData();
-}
+ async function handleWeekSelect(week: { number: number; start_date: string; end_date: string }) {
+  currentWeek.value = { start_date: week.start_date, end_date: week.end_date };
+  await loadAllTransactions();
+};
 
 onMounted(() => {
-  loadInventoryData();
+  loadInventories();
 });
 </script>

@@ -8,7 +8,7 @@
       block
       @click="open = !open"
     >
-      Ajouter un produit
+      Ajouter un élément à l'inventaire
     </UButton>
 
     <template #content>

@@ -17,17 +17,28 @@
         @click="selectWeek(week)"
       >
         <span class="font-mono text-xs">S{{ week.number }}</span>
-        <span class="hidden lg:inline text-xs text-gray-500 ml-2">{{ week.start }} - {{ week.end }}</span>
+        <span class="hidden lg:inline text-xs text-gray-500 ml-2">{{ week.label }}</span>
       </UButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { 
+  startOfMonth, 
+  endOfMonth, 
+  startOfWeek, 
+  endOfWeek, 
+  addWeeks, 
+  isSameMonth, 
+  format,
+  isWithinInterval
+} from 'date-fns';
+import { fr } from 'date-fns/locale';
+
 interface Week {
   number: number;
-  start: string;
-  end: string;
+  label: string;
   start_date: string;
   end_date: string;
 }
@@ -40,75 +51,49 @@ const currentDate = ref(new Date());
 const selectedWeek = ref<number | null>(null);
 
 const monthLabel = computed(() => {
-  return currentDate.value.toLocaleDateString('fr-FR', {
-    month: 'long',
-    year: 'numeric'
-  });
+  return format(currentDate.value, 'MMMM yyyy', { locale: fr });
 });
 
 const weeks = computed((): Week[] => {
-  const year = currentDate.value.getFullYear();
-  const month = currentDate.value.getMonth();
+  const monthStart = startOfMonth(currentDate.value);
+  const monthEnd = endOfMonth(currentDate.value);
   
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
+  // Premier lundi du mois (ou avant)
+  let weekStart = startOfWeek(monthStart, { weekStartsOn: 1 });
   
   const weeks: Week[] = [];
-  let current = new Date(firstDay);
-  
-  while (current.getDay() !== 1) {
-    current.setDate(current.getDate() - 1);
-  }
-  
   let weekNum = 1;
   
-  while (current <= lastDay || current.getMonth() === month) {
-    const start = new Date(current);
-    const end = new Date(current);
-    end.setDate(end.getDate() + 6);
+  while (weekStart <= monthEnd) {
+    const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
     
-    if (end >= firstDay && start <= lastDay) {
+    // Garder si la semaine intersecte le mois
+    const intersectsMonth = isSameMonth(weekStart, monthStart) || 
+                           isSameMonth(weekEnd, monthStart) ||
+                           (weekStart < monthStart && weekEnd > monthEnd);
+    
+    if (intersectsMonth) {
       weeks.push({
         number: weekNum,
-        start: formatDate(start),
-        end: formatDate(end),
-        start_date: formatDateISO(start),
-        end_date: formatDateISO(end)
+        label: `${format(weekStart, 'dd/MM')} - ${format(weekEnd, 'dd/MM')}`,
+        start_date: format(weekStart, 'yyyy-MM-dd'),
+        end_date: format(weekEnd, 'yyyy-MM-dd')
       });
       weekNum++;
     }
     
-    current.setDate(current.getDate() + 7);
+    weekStart = addWeeks(weekStart, 1);
   }
   
   return weeks;
 });
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit'
-  });
-}
-
-function formatDateISO(date: Date): string {
-  return date.toISOString().split('T')[0];
-}
-
 function previousMonth() {
-  currentDate.value = new Date(
-    currentDate.value.getFullYear(),
-    currentDate.value.getMonth() - 1,
-    1
-  );
+  currentDate.value = addMonths(currentDate.value, -1);
 }
 
 function nextMonth() {
-  currentDate.value = new Date(
-    currentDate.value.getFullYear(),
-    currentDate.value.getMonth() + 1,
-    1
-  );
+  currentDate.value = addMonths(currentDate.value, 1);
 }
 
 function selectWeek(week: Week) {
@@ -125,8 +110,9 @@ onMounted(() => {
   const currentWeek = weeks.value.find(w => {
     const start = new Date(w.start_date);
     const end = new Date(w.end_date);
-    return today >= start && today <= end;
+    return isWithinInterval(today, { start, end });
   });
+  
   if (currentWeek) {
     selectedWeek.value = currentWeek.number;
     emit('select', {

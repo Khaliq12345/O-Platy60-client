@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
+  <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
     <div class="flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-800">
       <h3 class="font-semibold text-gray-900 dark:text-white">{{ item.name }}</h3>
       <UButton
@@ -7,35 +7,56 @@
         variant="soft"
         size="sm"
         :icon="isOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-        @click="isOpen = !isOpen"
+        @click="toggleOpen"
       />
     </div>
 
-    <div class="p-4 space-y-1">
-      <div v-for="(day, index) in visibleDays" :key="index" class="flex items-center justify-between py-2 border-b border-gray-50 dark:border-gray-800 last:border-0">
-        <div class="font-medium text-gray-600 dark:text-gray-400 w-20">{{ weekDays[index] }}</div>
-        <div class="flex items-center gap-2">
-          <Metric label="Entrées" value="--" />
-          <div class="text-center">
-            <span class="text-[10px] uppercase text-gray-400 font-medium block">Ventes</span>
-            <UInputNumber v-model="day.sales" :min="0" size="sm" placeholder="—" class="w-20" />
-          </div>
+    <div class="p-3 space-y-2">
+      <div v-for="day in visibleDays" :key="day.date" class="flex items-center justify-between">
+        <span class="text-sm text-gray-600 dark:text-gray-400 w-16">
+          {{ formatDayLabel(day.date) }}
+        </span>
+        
+        <div class="flex gap-2">
+          <UInputNumber :model-value="day.entry" disabled size="sm" class="w-20 opacity-60" />
+          <UInputNumber
+            :model-value="day.sale"
+            :min="0"
+            size="sm"
+            placeholder="0"
+            class="w-20"
+            @update:model-value="function(val) { emitUpdateSale(day, val) }"
+          />
         </div>
       </div>
 
-      <UButton v-if="!showAll && days.length > 3" variant="link" size="sm" color="primary" block class="mt-2" @click="showAll = true">
-        Voir les 4 autres jours
+      <UButton 
+        v-if="!showAll && days.length > 3" 
+        variant="link" 
+        size="sm" 
+        color="primary" 
+        block 
+        @click="showMore"
+      >
+        Voir plus
       </UButton>
 
       <template v-if="showAll">
-        <div v-for="(day, index) in hiddenDays" :key="index + 3" class="flex items-center justify-between py-2 border-b border-gray-50 dark:border-gray-800 last:border-0">
-          <div class="font-medium text-gray-600 dark:text-gray-400 w-20">{{ weekDays[index + 3] }}</div>
-          <div class="flex items-center gap-2">
-            <Metric label="Entrées" value="--" />
-            <div class="text-center">
-              <span class="text-[10px] uppercase text-gray-400 font-medium block">Ventes</span>
-              <UInputNumber v-model="day.sales" :min="0" size="sm" placeholder="—" class="w-20" />
-            </div>
+        <div v-for="day in hiddenDays" :key="day.date" class="flex items-center justify-between">
+          <span class="text-sm text-gray-600 dark:text-gray-400 w-16">
+            {{ formatDayLabel(day.date) }}
+          </span>
+          
+          <div class="flex gap-2">
+            <UInputNumber :model-value="day.entry" disabled size="sm" class="w-20 opacity-60" />
+            <UInputNumber
+              :model-value="day.sale"
+              :min="0"
+              size="sm"
+              placeholder="0"
+              class="w-20"
+              @update:model-value="function(val) { emitUpdateSale(day, val) }"
+            />
           </div>
         </div>
       </template>
@@ -46,22 +67,51 @@
 </template>
 
 <script setup lang="ts">
-import type { Inventory } from '~/types/inventory';
-
-interface DayValue {
-  entries: number | null;
-  sales: number | null;
-}
+import { format, parseISO } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import type { Inventory } from "~/types/inventory";
+import type { DayData } from "~/types/inventory";
 
 const props = defineProps<{
   item: Inventory;
-  days: DayValue[];
+  days: DayData[];
+}>();
+
+const emit = defineEmits<{
+  updateSale: [data: { date: string; sale: number; transactionId?: number }];
 }>();
 
 const isOpen = ref(false);
 const showAll = ref(false);
-const weekDays = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 
-const visibleDays = computed(() => props.days.slice(0, 3));
-const hiddenDays = computed(() => props.days.slice(3));
+function toggleOpen() {
+  isOpen.value = !isOpen.value;
+}
+
+function showMore() {
+  showAll.value = true;
+}
+
+function formatDayLabel(dateStr: string): string {
+  const date = parseISO(dateStr);
+  const dayName = format(date, 'EEE', { locale: fr });
+  const dayNumber = format(date, 'dd');
+  return dayName + ' ' + dayNumber;
+}
+
+function emitUpdateSale(day: DayData, val: number | null) {
+  emit('updateSale', {
+    date: day.date,
+    sale: val ?? 0,
+    transactionId: day.transactionId
+  });
+}
+
+const visibleDays = computed(function() {
+  return props.days.slice(0, 3);
+});
+
+const hiddenDays = computed(function() {
+  return props.days.slice(3);
+});
 </script>
