@@ -3,9 +3,27 @@
     <!-- Loading -->
     <div v-if="loading" class="h-screen flex items-center justify-center">
       <Loading />
-    <!-- Form -->
     </div>
-    <div v-else-if="categories.length > 0" class="max-w-2xl mx-auto px-4 py-8">
+    
+    <!-- Error -->
+    <div v-else-if="loadError" class="h-screen flex flex-col items-center justify-center px-4">
+      <UIcon name="i-lucide-alert-circle" class="w-16 h-16 text-red-500 mb-4" />
+      <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+        Erreur de chargement
+      </h2>
+      <p class="text-gray-500 text-center mb-6">
+        Impossible de charger les données nécessaires. Veuillez réessayer.
+      </p>
+      <UButton
+        color="primary"
+        icon="i-lucide-refresh-cw"
+        label="Réessayer"
+        @click="reloadData"
+      />
+    </div>
+    
+    <!-- Form -->
+    <div v-else-if="inventories.length > 0" class="max-w-2xl mx-auto px-4 py-8">
       <!-- Lien retour -->
       <UButton
         color="neutral"
@@ -22,111 +40,106 @@
       </h1>
 
       <!-- Formulaire -->
-      <div>
-        <UForm
-          :schema="schema"
-          :state="state"
-          class="space-y-6"
-          @submit="onSubmit"
-        >
-          <!-- Nom de l'article -->
-          <UFormField label="Nom de l'article" name="item_name" required>
-            <UInput
-              v-model="state.item_name"
-              placeholder="Rechercher ou créer un article..."
-              class="w-full"
-            />
-          </UFormField>
+      <UForm
+        :schema="schema"
+        :state="state"
+        class="space-y-6"
+        @submit="onSubmit"
+      >
+        <!-- Sélection de l'inventaire -->
+        <UFormField label="Produit" name="inventory_id" required>
+          <USelect
+            v-model="state.inventory_id"
+            :items="selectItems"
+            placeholder="Sélectionner un produit"
+            class="w-full"
+            @update:model-value="onInventorySelect"
+          />
+        </UFormField>
 
-          <!-- Catégorie -->
-          <UFormField label="Catégorie" name="category_id" required>
-            <USelect
-              v-model="state.category_id"
-              :items="categories"
-              placeholder="Sélectionner une catégorie"
-              class="w-full"
-            />
-          </UFormField>
-
-          <!-- Quantité et Unité -->
-          <div class="grid grid-cols-2 gap-4">
-            <UFormField label="Quantité" name="quantity" required>
-              <UInputNumber
-                v-model="state.quantity"
-                :min="1"
-                placeholder="ex: 10"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField label="Unité" name="unit" required>
-              <USelect
-                v-model="state.unit"
-                :items="units"
-                placeholder="Sélectionner une unité"
-                class="w-full"
-              />
-            </UFormField>
-          </div>
-
-          <!-- Prix par unité -->
-          <UFormField
-            label="Prix par unité (FCFA)"
-            name="price_per_unit"
-            required
-          >
-            <UInputNumber
-              v-model="state.price_per_unit"
-              :step="0.01"
-              :min="0"
-              placeholder="ex: 2500"
-              class="w-full"
-            />
-          </UFormField>
-
-          <!-- Prix total (calculé) -->
-          <UFormField label="Prix Total" required>
-            <div
-              class="text-xl md:text-2xl font-bold text-primary-600 dark:text-primary-400"
-            >
-              {{ totalPrice.toLocaleString("fr-FR") }} FCFA
+        <!-- Info produit sélectionné -->
+        <div v-if="selectedInventory" class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <div class="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span class="text-gray-500">Catégorie:</span>
+              <span class="ml-2 font-medium">{{ selectedInventory.category_name }}</span>
             </div>
-          </UFormField>
-
-          <!-- Notes -->
-          <UFormField label="Notes" name="notes">
-            <UTextarea
-              v-model="state.notes"
-              placeholder="Ajouter des détails supplémentaires..."
-              :rows="4"
-              class="w-full"
-            />
-          </UFormField>
-
-          <!-- Boutons -->
-          <div class="flex justify-end gap-3 pt-4">
-            <UButton
-              type="button"
-              color="neutral"
-              variant="soft"
-              label="Annuler"
-              @click="onCancel"
-            />
-            <UButton type="submit" color="primary" label="Enregistrer" />
+            <div>
+              <span class="text-gray-500">Unité:</span>
+              <span class="ml-2 font-medium">{{ selectedInventory.unit }}</span>
+            </div>
           </div>
-        </UForm>
-      </div>
+        </div>
+
+        <!-- Quantité -->
+        <UFormField label="Quantité" name="quantity" required>
+          <UInputNumber
+            v-model="state.quantity"
+            :min="1"
+            placeholder="ex: 10"
+            class="w-full"
+          />
+        </UFormField>
+
+        <!-- Prix par unité -->
+        <UFormField
+          label="Prix par unité (FCFA)"
+          name="price_per_unit"
+          required
+        >
+          <UInputNumber
+            v-model="state.price_per_unit"
+            :step="0.01"
+            :min="0"
+            placeholder="ex: 2500"
+            class="w-full"
+          />
+        </UFormField>
+
+        <!-- Prix total (calculé) -->
+        <UFormField label="Prix Total" required>
+          <div
+            class="text-xl md:text-2xl font-bold text-primary-600 dark:text-primary-400"
+          >
+            {{ totalPrice.toLocaleString("fr-FR") }} FCFA
+          </div>
+        </UFormField>
+
+        <!-- Notes -->
+        <UFormField label="Notes" name="notes">
+          <UTextarea
+            v-model="state.notes"
+            placeholder="Ajouter des détails supplémentaires..."
+            :rows="4"
+            class="w-full"
+          />
+        </UFormField>
+
+        <!-- Boutons -->
+        <div class="flex justify-end gap-3 pt-4">
+          <UButton
+            type="button"
+            color="neutral"
+            variant="soft"
+            label="Annuler"
+            @click="onCancel"
+          />
+          <UButton type="submit" color="primary" label="Enregistrer" />
+        </div>
+      </UForm>
     </div>
+    
     <!-- Empty -->
     <div v-else>
-      <UEmpty icon="i-lucide-circle-minus" title="Impossible de charger les catérogies.">
+      <UEmpty icon="i-lucide-circle-minus" title="Aucun produit disponible.">
         <template #action>
           <UButton
-                icon="i-lucide-arrow-up-right"
-                variant="subtle"
-                :to="`/purchases`"
-                >Rediriger vers achats</UButton
-              >
+            icon="i-lucide-arrow-up-right"
+            variant="subtle"
+            :to="`/inventories`"
+          >
+            Créer un produit
+          </UButton>
         </template>
       </UEmpty>
     </div>
@@ -136,19 +149,23 @@
 <script setup lang="ts">
 import { z } from "zod";
 import type { FormSubmitEvent } from "@nuxt/ui";
+import type { Inventory } from "~/types/inventory";
 import type { Category } from "~/types/category";
+import { create } from "node:domain";
 
 const router = useRouter();
 const { get, post } = useApi();
-const loading = ref(true)
+const toast = useToast();
+const authStore = useAuthStore();
+
+const loading = ref(true);
+const loadError = ref(false);
 
 // Schéma Zod de validation
 const schema = z.object({
-  item_name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
+  inventory_id: z.string().min(1, "Veuillez sélectionner un produit"),
   quantity: z.number().min(1, "La quantité doit être d'au moins 1"),
-  unit: z.string().min(1, "L'unité est requise"),
   price_per_unit: z.number().min(0.01, "Le prix doit être supérieur à 0"),
-  category_id: z.string().min(1, "La catégorie est requise"),
   notes: z.string().optional(),
 });
 
@@ -156,46 +173,139 @@ type Schema = z.output<typeof schema>;
 
 // État du formulaire
 const state = reactive<Partial<Schema>>({
-  item_name: "",
+  inventory_id: undefined,
   quantity: undefined,
-  unit: undefined,
   price_per_unit: undefined,
-  category_id: "",
   notes: "",
 });
 
+// Cache des noms de catégories
+const categoryNames = ref<Record<string, string>>({});
+
+// Inventaires enrichis avec nom de catégorie
+const inventories = ref<Array<{
+  inventory_id: string;
+  name: string;
+  unit: string;
+  category: string;
+  category_name: string;
+}>>([]);
+
+// Inventaires pour le select
+const selectItems = computed(function() {
+  return inventories.value.map(function(inv) {
+    return {
+      label: inv.name,
+      value: inv.inventory_id,
+    };
+  });
+});
+
+// Inventaire sélectionné
+const selectedInventory = computed(function() {
+  if (!state.inventory_id) return null;
+  return inventories.value.find(function(inv) {
+    return inv.inventory_id === state.inventory_id;
+  });
+});
+
 // Calcul du prix total
-const totalPrice = computed(() => {
+const totalPrice = computed(function() {
   if (!state.quantity || !state.price_per_unit) return 0;
   return state.quantity * state.price_per_unit;
 });
 
-// Catégories dynamiques
-const categories = ref<{ label: string; value: string }[]>([]);
+// Charger le nom d'une catégorie
+async function loadCategoryName(categoryId: string): Promise<string> {
+  if (categoryNames.value[categoryId]) {
+    return categoryNames.value[categoryId];
+  }
+  
+  try {
+    const category = await get<Category>("/categories/" + categoryId);
+    const name = category.name || "Non catégorisé";
+    categoryNames.value[categoryId] = name;
+    return name;
+  } catch (err) {
+    return "Non catégorisé";
+  }
+}
 
-// Unités prédéfinies
-const units = [
-  { label: "Pièce", value: "pièce" },
-  { label: "Kilogramme", value: "kg" },
-  { label: "Litre", value: "L" },
-  { label: "Mètre", value: "m" },
-  { label: "Ramette", value: "ramette" },
-  { label: "Forfait", value: "forfait" },
-];
+// Charger les données
+async function loadData() {
+  loading.value = true;
+  loadError.value = false;
+  
+  try {
+    const response = await get<{ inventories: Inventory[]; count: number }>("/inventories");
+    const inventoryList = response?.inventories ?? [];
+    
+    if (inventoryList.length === 0) {
+      inventories.value = [];
+      loading.value = false;
+      return;
+    }
+    
+    // Charger les noms de catégories en parallèle
+    const enrichedInventories = await Promise.all(
+      inventoryList.map(async function(inv) {
+        const categoryName = await loadCategoryName(inv.category || "");
+        return {
+          inventory_id: inv.inventory_id,
+          name: inv.name,
+          unit: inv.unit,
+          category: inv.category || "",
+          category_name: categoryName,
+        };
+      })
+    );
+    
+    inventories.value = enrichedInventories;
+  } catch (err) {
+    console.error("Erreur lors du chargement:", err);
+    loadError.value = true;
+    toast.add({
+      title: "Erreur",
+      description: "Impossible de charger les produits.",
+      color: "error",
+    });
+  } finally {
+    loading.value = false;
+  }
+}
 
-const toast = useToast();
+function reloadData() {
+  loadData();
+}
 
 // Soumission du formulaire
 async function onSubmit(event: FormSubmitEvent<Schema>) {
+  const selected = selectedInventory.value;
+  
+  if (!selected) {
+    toast.add({
+      title: "Erreur",
+      description: "Produit non trouvé.",
+      color: "error",
+    });
+    return;
+  }
+  
   try {
     const purchaseData = {
-      ...event.data,
+      item_name: selected.name,
+      quantity: event.data.quantity,
+      unit: selected.unit,
+      price_per_unit: event.data.price_per_unit,
       total_price: totalPrice.value,
       purchase_date: new Date().toISOString().split("T")[0],
-      created_by: "42ad2622-23a6-4fce-91fd-4c1996bb2902",
+      category_id: selected.category,
+      inventory_id: event.data.inventory_id,
+      notes: event.data.notes || "",
+      created_by: authStore.user?.id,
     };
 
-    await post("/purchases/", purchaseData);
+    await post("/purchases", purchaseData);
 
     toast.add({
       title: "Succès",
@@ -218,22 +328,12 @@ function onCancel() {
   router.push("/purchases");
 }
 
-// Charger les catégories
-onMounted(async () => {
-  try {
-    const response = await get<Category[]>("/categories");
-    categories.value = response.map((cat) => ({
-      label: cat.name,
-      value: cat.id,
-    }));
-  } catch(err) {
-    console.error("Erreur lors du chargement des catégories:", err);
-    toast.add({
-      title: "Erreur",
-      description: "Une erreur est survenue lors du chargement des catégories.",
-      color: "error",
-    });
-  }
-  loading.value = false;
+// Quand on sélectionne un inventaire
+function onInventorySelect(inventoryId: string) {
+  console.log("Produit sélectionné:", inventoryId);
+}
+
+onMounted(function() {
+  loadData();
 });
 </script>

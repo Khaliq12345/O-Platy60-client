@@ -18,15 +18,19 @@
         </span>
         
         <div class="flex gap-2">
-          <UInputNumber :model-value="day.entry" disabled size="sm" class="w-20 opacity-60" />
-          <UInputNumber
+          <UFormField label="Entrées">
+            <UInputNumber :model-value="day.entry" disabled size="sm" class="w-20 opacity-60" />
+          </UFormField>
+          <UFormField label="Vente">
+            <UInputNumber
             :model-value="day.sale"
             :min="0"
             size="sm"
             placeholder="0"
             class="w-20"
-            @update:model-value="function(val) { emitUpdateSale(day, val) }"
-          />
+            @update:model-value="(val) => emitUpdateSale(day, val)"
+            />
+          </UFormField>
         </div>
       </div>
 

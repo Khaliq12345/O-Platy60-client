@@ -35,7 +35,7 @@
           />
         </UFormField>
 
-        <UFormField label="Unité" name="unit" required>
+        <UFormField label="Mesure" name="unit" required>
           <USelect
             v-model="state.unit"
             :items="units"
