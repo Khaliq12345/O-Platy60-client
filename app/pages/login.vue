@@ -1,7 +1,7 @@
 <template>
   <div class="h-screen w-screen flex items-center justify-center">
     <UAuthForm
-      title="O-Platy"
+      title="O-Platy60"
       description="Connectez-vous"
       :fields="fields"
       :schema="schema"

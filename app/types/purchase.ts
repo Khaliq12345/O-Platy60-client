@@ -2,30 +2,23 @@ import { Transformation } from "./transformation";
 
 export interface PurchaseItem {
   id: string;
-  item_name: string;
+  inventory_id: string;      // Lien vers l'inventaire
+  item_name: string;         // Nom de l'inventaire (denormalisé)
   quantity: number;
-  unit: string;
+  unit: string;              // Unité de l'inventaire
   price_per_unit: number;
   total_price: number;
-  purchase_date: string; // format: YYYY-MM-DD
-  category_id: string;
+  purchase_date: string;
+  category_id: string;       // Catégorie de l'inventaire
   notes: string;
   created_by: string;
   transformations: Transformation[];
 }
 
 export interface CreatePurchaseInput {
-  item_name: string;
+  inventory_id: string;      // Requis - lien vers l'inventaire
   quantity: number;
-  unit: string;
   price_per_unit: number;
   purchase_date: string;
-  category_id: string;
   notes: string;
-}
-
-export interface PurchaseSummary extends PurchaseItem {
-  total_received_quantity: number;
-  total_used_quantity: number;
-  remaining_quantity: number;
 }
