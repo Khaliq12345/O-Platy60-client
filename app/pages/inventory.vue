@@ -5,7 +5,7 @@
     </template>
 
     <template #body>
-      <div class="p-4 lg:p-6 space-y-4 lg:space-y-6">
+      <div class="lg:p-6 lg:space-y-6">
         <div class="flex flex-col gap-4">
           <InventoryHeader />
           <InventoryAdd />
