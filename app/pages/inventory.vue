@@ -166,6 +166,7 @@ watch(
   () => filterData.search,
   async () => {
     console.log("Search updated");
+    query.value.search = filterData.search;
     await loadInventories();
   },
 );
