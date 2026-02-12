@@ -54,10 +54,7 @@
         </UFormField>
 
         <div class="md:col-span-2 md:px-4 flex justify-center">
-
-          <UButton type="submit" color="primary">
-            Ajouter le produit
-          </UButton>
+          <UButton type="submit" color="primary"> Ajouter le produit </UButton>
         </div>
       </UForm>
     </template>
@@ -85,14 +82,16 @@ const toast = useToast();
 
 // Schéma de validation Zod
 const schema = z.object({
-  name: z.string().min(2, "Le nom doit contenir au moins 2 caractères").max(100),
+  name: z
+    .string()
+    .min(2, "Le nom doit contenir au moins 2 caractères")
+    .max(100),
   initial_quantity: z.number().min(0, "La quantité doit être positive").int(),
   unit: z.string().min(1, "Veuillez sélectionner une unité"),
   category: z.string().min(1, "Veuillez sélectionner une catégorie"),
 });
 
 type Schema = z.output<typeof schema>;
-
 // État du formulaire
 const state = reactive<Partial<Schema>>({
   name: "",
@@ -115,9 +114,9 @@ const units = [
 const onSubmit = async (event: FormSubmitEvent<Schema>) => {
   try {
     console.log("Produit ajouté:", event.data);
-    
+
     // Ici vous pouvez faire votre appel API
-    await post("/inventories", event.data);
+    await post("/inventories", { ...event.data, created_at: getDate() });
     toast.add({
       title: "Succès",
       description: "Le produit a été ajouté avec succès.",
@@ -131,10 +130,8 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       unit: "",
       category: "",
     });
-    
-    
+
     open.value = false;
-    
   } catch (error) {
     toast.add({
       title: "Erreur",

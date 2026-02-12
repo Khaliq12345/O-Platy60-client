@@ -18,23 +18,16 @@
     </div>
 
     <!-- Sélecteur de semaine -->
-    <InventoryWeekSelector @select="handleWeekSelect" />
+    <InventoryWeekSelector />
   </div>
 </template>
 
 <script setup lang="ts">
-const emit = defineEmits<{
-  search: [query: string];
-  weekSelect: [week: { number: number; start: string; end: string }];
-}>();
+const filterData: any = inject("filterInfo");
 
-const searchQuery = ref('');
+const searchQuery = ref("");
 
 function handleSearch() {
-  emit('search', searchQuery.value);
-}
-
-function handleWeekSelect(week: { number: number; start: string; end: string }) {
-  emit('weekSelect', week);
+  filterData.search = searchQuery.value;
 }
 </script>

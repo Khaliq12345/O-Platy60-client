@@ -9,11 +9,8 @@
         <div class="flex flex-col gap-4">
           <InventoryHeader />
           <InventoryAdd />
-          
-          <InventoryFilters
-            @search="handleSearch"
-            @week-select="handleWeekSelect"
-          />
+
+          <InventoryFilters />
         </div>
 
         <Loading v-if="loading" />
@@ -25,11 +22,14 @@
               :key="item.inventory_id"
               :item="item"
               :days="getDaysForInventory(item.inventory_id)"
-              @transaction-updated="reloadInventoryTransactions"
+              @transaction-updated="loadInventories"
             />
           </div>
 
-          <div v-if="inventoryItems.length === 0" class="text-center py-12 text-gray-500">
+          <div
+            v-if="inventoryItems.length === 0"
+            class="text-center py-12 text-gray-500"
+          >
             Aucun inventaire trouvé
           </div>
 
@@ -37,8 +37,19 @@
             :page="query.page"
             :limit="query.limit"
             :total="query.total"
-            @change-page="(val: number) => { query.page = val; loadInventories(); }"
-            @change-limit="(val: any) => { query.limit = val.limit; query.page = val.page; loadInventories(); }"
+            @change-page="
+              (val: number) => {
+                query.page = val;
+                loadInventories();
+              }
+            "
+            @change-limit="
+              (val: any) => {
+                query.limit = val.limit;
+                query.page = val.page;
+                loadInventories();
+              }
+            "
           />
         </div>
       </div>
@@ -47,12 +58,12 @@
 </template>
 
 <script setup lang="ts">
-import { addDays, format } from 'date-fns';
-import type { 
-  Inventory, 
-  InventoriesResponse, 
+import { addDays, format } from "date-fns";
+import type {
+  Inventory,
+  InventoriesResponse,
   InventoryTransaction,
-  DayData 
+  DayData,
 } from "~/types/inventory";
 
 const { get } = useApi();
@@ -61,30 +72,29 @@ const loading = ref(true);
 const inventoryItems = ref<Inventory[]>([]);
 const transactions = ref<Record<string, InventoryTransaction[]>>({});
 const currentWeek = ref<{ start_date: string; end_date: string } | null>(null);
-
 const query = ref({
   page: 1,
   limit: 5,
   total: 0,
-  search: '',
+  search: "",
 });
 
 // Génère les 7 jours de la semaine à partir du start_date (lundi)
 const weekDays = computed((): DayData[] => {
   if (!currentWeek.value) return [];
-  
+
   const days: DayData[] = [];
-  const start = new Date(currentWeek.value.start_date + 'T12:00:00'); // Midi pour éviter les problèmes de timezone
-  
+  const start = new Date(currentWeek.value.start_date + "T12:00:00"); // Midi pour éviter les problèmes de timezone
+
   for (let i = 0; i < 7; i++) {
     const date = addDays(start, i);
     days.push({
-      date: format(date, 'yyyy-MM-dd'),
+      date: format(date, "yyyy-MM-dd"),
       entry: 0,
       sale: 0,
     });
   }
-  
+
   return days;
 });
 
@@ -93,66 +103,31 @@ async function loadInventories() {
     loading.value = true;
     const params: any = { ...query.value };
     if (!params.search) delete params.search;
-    
+
     const response = await get<InventoriesResponse>("/inventories", params);
+    console.log(response, "LODING");
     inventoryItems.value = response?.inventories ?? [];
     query.value.total = response?.count ?? 0;
-    
-    if (currentWeek.value) {
-      await loadAllTransactions();
+    for (const item of inventoryItems.value) {
+      transactions.value[item.inventory_id] = item.inventory_transaction;
     }
   } catch (error) {
     inventoryItems.value = [];
   } finally {
     loading.value = false;
   }
-};
-
-async function loadAllTransactions() {
-  if (!currentWeek.value) return;
-  
-  const { start_date, end_date } = currentWeek.value;
-  
-  for (const item of inventoryItems.value) {
-    try {
-      const txs = await get<InventoryTransaction[]>(
-        `/inventories/${item.inventory_id}/transactions`,
-        { start_date, end_date }
-      );
-      transactions.value[item.inventory_id] = txs ?? [];
-    } catch (error) {
-      transactions.value[item.inventory_id] = [];
-    }
-  }
-};
-
-async function reloadInventoryTransactions(inventoryId: string)  {
-  if (!currentWeek.value) return;
-  
-  try {
-    const txs = await get<InventoryTransaction[]>(
-      `/inventories/${inventoryId}/transactions`,
-      { 
-        start_date: currentWeek.value.start_date, 
-        end_date: currentWeek.value.end_date 
-      }
-    );
-    transactions.value[inventoryId] = txs ?? [];
-  } catch (error) {
-    // Silencieux
-  }
-};
+}
 
 function getDaysForInventory(inventoryId: string): DayData[] {
   const inventoryTxs = transactions.value[inventoryId] ?? [];
-  
-  return weekDays.value.map(day => {
+
+  return weekDays.value.map((day) => {
     // Comparer les dates sans tenir compte du timezone
-    const tx = inventoryTxs.find(t => {
+    const tx = inventoryTxs.find((t) => {
       const txDate = t.created_at.substring(0, 10); // "2026-02-10"
       return txDate === day.date;
     });
-    
+
     return {
       ...day,
       entry: tx?.entry ?? 0,
@@ -160,20 +135,38 @@ function getDaysForInventory(inventoryId: string): DayData[] {
       transactionId: tx?.id,
     };
   });
-};
+}
 
-function handleSearch(search: string) {
-  query.value.search = search;
-  query.value.page = 1;
-  loadInventories();
-};
-
- async function handleWeekSelect(week: { number: number; start_date: string; end_date: string }) {
-  currentWeek.value = { start_date: week.start_date, end_date: week.end_date };
-  await loadAllTransactions();
-};
-
-onMounted(() => {
-  loadInventories();
+// Create a provide for the Filter and Pagination sections
+const filterData = reactive({
+  search: "",
+  weekNumber: 1,
+  start_date: "",
+  end_date: "",
 });
+
+provide("filterInfo", filterData);
+
+// React when the Week and date change
+watch(
+  () => filterData.start_date,
+  async () => {
+    console.log("Start Date Updated");
+
+    currentWeek.value = {
+      start_date: filterData.start_date,
+      end_date: filterData.end_date,
+    };
+    await loadInventories();
+  },
+);
+
+// Reach when or search is updated
+watch(
+  () => filterData.search,
+  async () => {
+    console.log("Search updated");
+    await loadInventories();
+  },
+);
 </script>

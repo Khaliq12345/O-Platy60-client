@@ -1,3 +1,21 @@
+// Transaction
+export interface InventoryTransactionBase {
+  inventory_id: string;
+  sale: number;
+}
+
+export interface InventoryTransactionCreate extends InventoryTransactionBase {
+  created_at?: string | null;
+}
+
+export interface InventoryTransaction extends InventoryTransactionBase {
+  id: number;
+  entry: number;
+  created_at: string;
+}
+
+// Inventory
+//
 export interface InventoryBase {
   name: string;
   initial_quantity: number;
@@ -17,6 +35,7 @@ export interface InventoryUpdate {
 export interface Inventory extends InventoryBase {
   inventory_id: string;
   created_at: string;
+  inventory_transaction: InventoryTransaction[];
 }
 
 // Réponse du serveur
@@ -24,23 +43,6 @@ export interface InventoriesResponse {
   inventories: Inventory[];
   count: number;
 }
-
-// Transaction
-export interface InventoryTransactionBase {
-  inventory_id: string;
-  sale: number;
-}
-
-export interface InventoryTransactionCreate extends InventoryTransactionBase {
-  created_at?: string | null;
-}
-
-export interface InventoryTransaction extends InventoryTransactionBase {
-  id: number;
-  entry: number;
-  created_at: string;
-}
-
 // Résumé hebdomadaire
 export interface WeeklyInventorySummary {
   id: number;
