@@ -18,6 +18,11 @@ export const Navitems: NavigationMenuItem[][] = [
       to: "/transformations",
     },
     {
+      label: "Inventaire",
+      icon: "i-lucide-package",
+      to: "/inventory",
+    },
+    {
       label: "Parametres",
       icon: "i-lucide-settings",
       defaultOpen: true,

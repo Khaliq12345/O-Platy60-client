@@ -13,7 +13,6 @@ export function useApi() {
         method: "POST",
         body: { refresh_token: authStore.refreshToken },
       });
-      console.log(response);
 
       if (response.access_token) {
         authStore.set(response.access_token, response.refresh_token);

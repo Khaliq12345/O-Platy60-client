@@ -8,7 +8,7 @@
       <div class="lg:p-6 lg:space-y-6">
         <div class="flex flex-col gap-4">
           <InventoryHeader />
-          <InventoryAdd />
+          <InventoryAdd @added="loadInventories" />
 
           <InventoryFilters />
         </div>
@@ -34,7 +34,7 @@
           </div>
 
           <LimitPagination
-            :page="query.page"
+            :page="query.page"n
             :limit="query.limit"
             :total="query.total"
             @change-page="

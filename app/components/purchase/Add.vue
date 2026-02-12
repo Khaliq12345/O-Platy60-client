@@ -151,7 +151,6 @@ import { z } from "zod";
 import type { FormSubmitEvent } from "@nuxt/ui";
 import type { Inventory } from "~/types/inventory";
 import type { Category } from "~/types/category";
-import { create } from "node:domain";
 
 const router = useRouter();
 const { get, post } = useApi();

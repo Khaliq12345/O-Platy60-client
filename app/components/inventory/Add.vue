@@ -13,7 +13,7 @@
 
     <template #content>
       <UForm
-        :schema="schema"
+        :schema="schema" 
         :state="state"
         @submit="onSubmit"
         class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg border-default"
@@ -54,7 +54,7 @@
         </UFormField>
 
         <div class="md:col-span-2 md:px-4 flex justify-center">
-          <UButton type="submit" color="primary"> Ajouter le produit </UButton>
+          <UButton type="submit" color="primary" :loading="processing"> Ajouter le produit </UButton>
         </div>
       </UForm>
     </template>
@@ -70,11 +70,15 @@ interface Category {
   id: string;
   name: string;
 }
+const emit = defineEmits<{
+  added: [];
+}>();
 
 // État réactif
 const open = ref(false);
 const loading = ref(true);
 const categories = ref<{ label: string; value: string }[]>([]);
+const processing = ref(false)
 
 // Composables
 const { get, post } = useApi();
@@ -112,6 +116,7 @@ const units = [
 
 // Soumission du formulaire
 const onSubmit = async (event: FormSubmitEvent<Schema>) => {
+  processing.value = true;
   try {
     console.log("Produit ajouté:", event.data);
 
@@ -131,6 +136,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       category: "",
     });
 
+    emit("added");
     open.value = false;
   } catch (error) {
     toast.add({
@@ -139,6 +145,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       color: "error",
     });
   }
+  processing.value = false;
 };
 
 // Chargement des catégories
