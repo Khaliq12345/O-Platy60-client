@@ -12,7 +12,7 @@
     </div>
 
     <div class="p-3 space-y-2">
-      <div v-for="day in visibleDays" :key="day.date" class="flex items-center justify-between">
+      <div v-for="(day, index) in visibleDays" :key="day.date" class="flex items-center justify-between">
         <span class="text-sm text-gray-600 dark:text-gray-400 w-16">
           {{ formatDayLabel(day.date) }}
         </span>
@@ -21,14 +21,14 @@
           <UFormField label="Entrées">
             <UInputNumber :model-value="day.entry" disabled size="sm" class="w-20 opacity-60" />
           </UFormField>
-          <UFormField label="Vente">
+          <UFormField :label="`Vente: ${day.sale}`">
             <UInputNumber
-            :model-value="day.sale"
-            :min="0"
-            size="sm"
-            placeholder="0"
-            class="w-20"
-            @update:model-value="(val) => emitUpdateSale(day, val)"
+              v-model="saleInputs[index]"
+              :min="0"
+              size="sm"
+              placeholder="0"
+              class="w-20"
+              @keyup.enter="emitUpdateSale(day, index)"
             />
           </UFormField>
         </div>
@@ -46,35 +46,43 @@
       </UButton>
 
       <template v-if="showAll">
-        <div v-for="day in hiddenDays" :key="day.date" class="flex items-center justify-between">
+        <div v-for="(day, idx) in hiddenDays" :key="day.date" class="flex items-center justify-between">
           <span class="text-sm text-gray-600 dark:text-gray-400 w-16">
             {{ formatDayLabel(day.date) }}
           </span>
           
           <div class="flex gap-2">
-            <UInputNumber :model-value="day.entry" disabled size="sm" class="w-20 opacity-60" />
-            <UInputNumber
-              :model-value="day.sale"
-              :min="0"
-              size="sm"
-              placeholder="0"
-              class="w-20"
-              @update:model-value="function(val) { emitUpdateSale(day, val) }"
-            />
+            <UFormField label="Entrées">
+              <UInputNumber :model-value="day.entry" disabled size="sm" class="w-20 opacity-60" />
+            </UFormField>
+            <UFormField label="Vente">  
+              <UInputNumber
+                v-model="saleInputs[visibleDays.length + idx]"
+                :min="0"
+                size="sm"
+                placeholder="0"
+                class="w-20"
+                @keyup.enter="emitUpdateSale(day, visibleDays.length + idx)"
+              />
+            </UFormField>
           </div>
         </div>
       </template>
     </div>
 
-    <InventoryDetails v-model:open="isOpen" />
+    <InventoryDetails 
+      v-model:open="isOpen" 
+      :inventory-id="item.inventory_id"
+      :start-date="days[0]?.date"
+      :end-date="days[6]?.date"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import type { Inventory } from "~/types/inventory";
-import type { DayData } from "~/types/inventory";
+import type { Inventory, DayData } from "~/types/inventory";
 
 const props = defineProps<{
   item: Inventory;
@@ -87,6 +95,8 @@ const emit = defineEmits<{
 
 const isOpen = ref(false);
 const showAll = ref(false);
+
+const saleInputs = ref<number[]>([]);
 
 function toggleOpen() {
   isOpen.value = !isOpen.value;
@@ -103,11 +113,11 @@ function formatDayLabel(dateStr: string): string {
   return dayName + ' ' + dayNumber;
 }
 
-function emitUpdateSale(day: DayData, val: number | null) {
+function emitUpdateSale(day: DayData, index: number) {
   emit('updateSale', {
     date: day.date,
-    sale: val ?? 0,
-    transactionId: day.transactionId
+    sale: saleInputs.value[index] ?? 0,
+    // transactionId: day.transactionId
   });
 }
 

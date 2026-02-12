@@ -54,7 +54,7 @@ const fields: AuthFormField[] = [
 ]
 
 const schema = z.object({
-  email: z.string().email('Email invalide'),
+  email: z.email('Email invalide'),
   password: z.string().min(1, 'Mot de passe requis')
 })
 
@@ -76,13 +76,13 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
     })
     
     if (response.user) {
-      authStore.set(response.user, response.access_token, response.refresh_token)
+      authStore.set(response.access_token, response.refresh_token, response.user)
     }
     
     toast.add({
       title: 'Connexion réussie',
       description: 'Vous êtes maintenant connecté',
-      color: 'green'
+      color: 'success'
     })
     
     await navigateTo('/')
@@ -90,7 +90,7 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
     toast.add({
       title: 'Erreur de connexion',
       description: error.data?.message || 'Email ou mot de passe incorrect',
-      color: 'red'
+      color: 'error'
     })
   } finally {
     loading.value = false

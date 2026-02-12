@@ -34,7 +34,7 @@
           </div>
 
           <LimitPagination
-            :page="query.page"n
+            :page="query.page"
             :limit="query.limit"
             :total="query.total"
             @change-page="
@@ -62,15 +62,16 @@ import { addDays, format } from "date-fns";
 import type {
   Inventory,
   InventoriesResponse,
-  InventoryTransaction,
   DayData,
+  DailyTransactionSummary
 } from "~/types/inventory";
 
 const { get } = useApi();
 
 const loading = ref(true);
 const inventoryItems = ref<Inventory[]>([]);
-const transactions = ref<Record<string, InventoryTransaction[]>>({});
+
+const transactions = ref<Record<string, DailyTransactionSummary[]>>({});
 const currentWeek = ref<{ start_date: string; end_date: string } | null>(null);
 const query = ref({
   page: 1,
@@ -79,12 +80,11 @@ const query = ref({
   search: "",
 });
 
-// Génère les 7 jours de la semaine à partir du start_date (lundi)
 const weekDays = computed((): DayData[] => {
   if (!currentWeek.value) return [];
 
   const days: DayData[] = [];
-  const start = new Date(currentWeek.value.start_date + "T12:00:00"); // Midi pour éviter les problèmes de timezone
+  const start = new Date(currentWeek.value.start_date + "T12:00:00");
 
   for (let i = 0; i < 7; i++) {
     const date = addDays(start, i);
@@ -105,11 +105,12 @@ async function loadInventories() {
     if (!params.search) delete params.search;
 
     const response = await get<InventoriesResponse>("/inventories", params);
-    console.log(response, "LODING");
+    console.log(response, "LOADING");
     inventoryItems.value = response?.inventories ?? [];
     query.value.total = response?.count ?? 0;
+    
     for (const item of inventoryItems.value) {
-      transactions.value[item.inventory_id] = item.inventory_transaction;
+      transactions.value[item.inventory_id] = item.daily_transaction_summary;
     }
   } catch (error) {
     inventoryItems.value = [];
@@ -122,22 +123,16 @@ function getDaysForInventory(inventoryId: string): DayData[] {
   const inventoryTxs = transactions.value[inventoryId] ?? [];
 
   return weekDays.value.map((day) => {
-    // Comparer les dates sans tenir compte du timezone
-    const tx = inventoryTxs.find((t) => {
-      const txDate = t.created_at.substring(0, 10); // "2026-02-10"
-      return txDate === day.date;
-    });
+    const tx = inventoryTxs.find((t) => t.summary_date === day.date);
 
     return {
       ...day,
-      entry: tx?.entry ?? 0,
-      sale: tx?.sale ?? 0,
-      transactionId: tx?.id,
+      entry: tx?.total_quantity ?? 0,
+      sale: tx?.total_sales ?? 0,
     };
   });
 }
 
-// Create a provide for the Filter and Pagination sections
 const filterData = reactive({
   search: "",
   weekNumber: 1,
@@ -147,12 +142,10 @@ const filterData = reactive({
 
 provide("filterInfo", filterData);
 
-// React when the Week and date change
 watch(
   () => filterData.start_date,
   async () => {
     console.log("Start Date Updated");
-
     currentWeek.value = {
       start_date: filterData.start_date,
       end_date: filterData.end_date,
@@ -161,7 +154,6 @@ watch(
   },
 );
 
-// Reach when or search is updated
 watch(
   () => filterData.search,
   async () => {

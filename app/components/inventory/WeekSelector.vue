@@ -46,8 +46,10 @@ import {
   addWeeks,
   isSameMonth,
   format,
-  isWithinInterval,
   addMonths,
+  getWeek,
+  startOfISOWeek,
+  endOfISOWeek,
 } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -58,20 +60,20 @@ interface Week {
   end_date: string;
 }
 
-// Reactive variable to hold the data
 const currentDate = ref(new Date());
 const selectedWeek = ref<number | null>(null);
+const isInitialized = ref(false); // Guard pour éviter le double appel
+
 const monthLabel = computed(() => {
   return format(currentDate.value, "MMMM yyyy", { locale: fr });
 });
+
 const filterData: any = inject("filterInfo");
 
-// Calculate all the weeks for a month and loading the inventories
+// ✅ Computed pur, sans side effects
 const weeksData = computed((): Week[] => {
   const monthStart = startOfMonth(currentDate.value);
   const monthEnd = endOfMonth(currentDate.value);
-
-  // Premier lundi du mois (ou avant)
   let weekStart = startOfWeek(monthStart, { weekStartsOn: 1 });
 
   const weeks: Week[] = [];
@@ -80,7 +82,6 @@ const weeksData = computed((): Week[] => {
   while (weekStart <= monthEnd) {
     const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
 
-    // Garder si la semaine intersecte le mois
     const intersectsMonth =
       isSameMonth(weekStart, monthStart) ||
       isSameMonth(weekEnd, monthStart) ||
@@ -99,24 +100,52 @@ const weeksData = computed((): Week[] => {
     weekStart = addWeeks(weekStart, 1);
   }
 
-  if (weeks.length > 0) {
-    filterData.number = weeks[0].number;
-    filterData.start_date = weeks[0].start_date;
-    filterData.end_date = weeks[0].end_date;
-  }
   return weeks;
 });
 
-// Update current date
+// Watcher pour gérer l'initialisation et le changement de mois
+watch(
+  weeksData,
+  (newWeeks) => {
+    if (newWeeks.length === 0) return;
+
+    // Si c'est la première initialisation, chercher la semaine actuelle
+    if (!isInitialized.value) {
+      const today = new Date();
+      const currentWeek = newWeeks.find((week) => {
+        const start = new Date(week.start_date);
+        const end = new Date(week.end_date);
+        return today >= start && today <= end;
+      });
+
+      if (currentWeek) {
+        selectWeek(currentWeek);
+      } else {
+        // Si on est pas dans le mois affiché, prendre la première semaine
+        selectWeek(newWeeks[0]);
+      }
+      isInitialized.value = true;
+    } 
+    // Si on change de mois et qu'aucune semaine n'est sélectionnée pour ce mois
+    else if (!newWeeks.find(w => w.number === selectedWeek.value)) {
+      selectWeek(newWeeks[0]);
+    }
+  },
+  { immediate: true }
+);
+
 function previousMonth() {
   currentDate.value = addMonths(currentDate.value, -1);
+  // Reset selectedWeek pour forcer la sélection d'une semaine du nouveau mois
+  selectedWeek.value = null;
 }
 
 function nextMonth() {
   currentDate.value = addMonths(currentDate.value, 1);
+  // Reset selectedWeek pour forcer la sélection d'une semaine du nouveau mois
+  selectedWeek.value = null;
 }
 
-// Function to run when the week is selected
 function selectWeek(week: Week) {
   selectedWeek.value = week.number;
   filterData.number = week.number;
