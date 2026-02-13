@@ -1,3 +1,11 @@
+// Résumé quotidien
+export interface DailyTransactionSummary {
+  created_at: string;    // ISO 8601 timestamp
+  total_sales: number;
+  total_quantity: number;
+  inventory_id: string;  // UUID
+  summary_date: string;  // ISO 8601 date (YYYY-MM-DD)
+}
 // Transaction
 export interface InventoryTransactionBase {
   inventory_id: string;
@@ -35,7 +43,7 @@ export interface InventoryUpdate {
 export interface Inventory extends InventoryBase {
   inventory_id: string;
   created_at: string;
-  inventory_transaction: InventoryTransaction[];
+  daily_transaction_summary: DailyTransactionSummary[];
 }
 
 // Réponse du serveur
@@ -61,4 +69,11 @@ export interface DayData {
   entry: number;
   sale: number;
   transactionId?: number;
+}
+
+// Résumé d'inventaire hebdomadaire
+export interface InventoryWeeklySummary {
+  final_quantity: number;
+  total_sales: number;
+  calculated_diff: number;
 }

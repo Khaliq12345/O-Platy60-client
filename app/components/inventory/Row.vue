@@ -16,12 +16,11 @@
 </template>
 
 <script setup lang="ts">
-import type { Inventory } from "~/types/inventory";
-import type { DayData } from "~/types/inventory";
+import type { Inventory, DailyTransactionSummary } from "~/types/inventory";
 
 const props = defineProps<{
   item: Inventory;
-  days: DayData[];
+  days: DailyTransactionSummary[];
 }>();
 
 const { post } = useApi();
@@ -41,6 +40,7 @@ const handleSaleUpdate = async (data: {
     };
     
     await post(`/inventories/transactions`, payload);
+    // console.log("Payload envoyé au backend:", payload);
     
     toast.add({
       title: "Succès",
