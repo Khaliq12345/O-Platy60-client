@@ -19,7 +19,7 @@
               v-model="manualQty"
               :min="0"
               size="lg"
-              class="w-24 mx-auto"
+              class="w-full"
               color="primary"
             />
 
@@ -29,8 +29,8 @@
           </div>
 
           <div class="w-full col-span-full flex justify-center">
-            <UButton 
-              label="Calculer le sommaire" 
+            <UButton
+              label="Calculer le sommaire"
               :loading="loading"
               @click="calculateSummary"
             />
@@ -42,22 +42,22 @@
 </template>
 
 <script setup lang="ts">
-import type { InventoryWeeklySummary } from '~/types/inventory'
+import type { InventoryWeeklySummary } from "~/types/inventory";
 
 const isOpen = defineModel<boolean>("open", { default: false });
 
 const props = defineProps<{
-  inventoryId: string
-  startDate: string
-  endDate: string
-}>()
+  inventoryId: string;
+  startDate: string;
+  endDate: string;
+}>();
 
-const { post } = useApi()
-const toast = useToast()
+const { post } = useApi();
+const toast = useToast();
 
-const loading = ref(false)
-const manualQty = ref<number | null>(null)
-const summary = ref<InventoryWeeklySummary | null>(null)
+const loading = ref(false);
+const manualQty = ref<number | null>(null);
+const summary = ref<InventoryWeeklySummary | null>(null);
 
 const stats = computed(() => [
   {
@@ -82,28 +82,43 @@ const stats = computed(() => [
     color: "text-gray-900 dark:text-white",
     isInput: false,
   },
-])
+]);
 
 async function calculateSummary() {
   if (!manualQty.value) {
-    toast.add({ title: "Erreur", description: "Veuillez saisir l'inventaire manuel", color: "error" })
-    return
+    toast.add({
+      title: "Erreur",
+      description: "Veuillez saisir l'inventaire manuel",
+      color: "error",
+    });
+    return;
   }
 
-  loading.value = true
+  loading.value = true;
   try {
-    summary.value = await post<InventoryWeeklySummary>('/inventories/weekly-summary', {
-      inventory_id: props.inventoryId,
-      start_date: props.startDate,
-      end_date: props.endDate,
-      manual_qty: manualQty.value,
-    })
-    
-    toast.add({ title: "Succès", description: "Sommaire calculé", color: "success" })
+    summary.value = await post<InventoryWeeklySummary>(
+      "/inventories/weekly-summary",
+      {
+        inventory_id: props.inventoryId,
+        start_date: props.startDate,
+        end_date: props.endDate,
+        manual_qty: manualQty.value,
+      },
+    );
+
+    toast.add({
+      title: "Succès",
+      description: "Sommaire calculé",
+      color: "success",
+    });
   } catch {
-    toast.add({ title: "Erreur", description: "Calcul impossible", color: "error" })
+    toast.add({
+      title: "Erreur",
+      description: "Calcul impossible",
+      color: "error",
+    });
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 </script>

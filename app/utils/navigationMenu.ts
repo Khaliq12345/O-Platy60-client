@@ -8,14 +8,14 @@ export const Navitems: NavigationMenuItem[][] = [
       to: "/dashboard",
     },
     {
+      label: "Catégories",
+      icon: "i-lucide-list",
+      to: "/categories",
+    },
+    {
       label: "Achats",
       icon: "i-lucide-inbox",
       to: "/purchases",
-    },
-    {
-      label: "Transformations",
-      icon: "i-lucide-replace-all",
-      to: "/transformations",
     },
     {
       label: "Inventaire",

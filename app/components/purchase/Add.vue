@@ -4,9 +4,12 @@
     <div v-if="loading" class="h-screen flex items-center justify-center">
       <Loading />
     </div>
-    
+
     <!-- Error -->
-    <div v-else-if="loadError" class="h-screen flex flex-col items-center justify-center px-4">
+    <div
+      v-else-if="loadError"
+      class="h-screen flex flex-col items-center justify-center px-4"
+    >
       <UIcon name="i-lucide-alert-circle" class="w-16 h-16 text-red-500 mb-4" />
       <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
         Erreur de chargement
@@ -21,7 +24,7 @@
         @click="reloadData"
       />
     </div>
-    
+
     <!-- Form -->
     <div v-else-if="inventories.length > 0" class="max-w-2xl mx-auto px-4 py-8">
       <!-- Lien retour -->
@@ -35,14 +38,17 @@
       />
 
       <!-- Titre -->
-      <h1 class="text-xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4">
+      <h1
+        class="text-xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4"
+      >
         Nouvel Achat
       </h1>
 
-      <!-- Formulaire -->
+      <!-- Formulaire avec loading -->
       <UForm
         :schema="schema"
         :state="state"
+        :loading="isSubmitting"
         class="space-y-6"
         @submit="onSubmit"
       >
@@ -53,16 +59,22 @@
             :items="selectItems"
             placeholder="Sélectionner un produit"
             class="w-full"
+            :disabled="isSubmitting"
             @update:model-value="onInventorySelect"
           />
         </UFormField>
 
         <!-- Info produit sélectionné -->
-        <div v-if="selectedInventory" class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <div
+          v-if="selectedInventory"
+          class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
+        >
           <div class="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span class="text-gray-500">Catégorie:</span>
-              <span class="ml-2 font-medium">{{ selectedInventory.category_name }}</span>
+              <span class="ml-2 font-medium">{{
+                selectedInventory.category_name
+              }}</span>
             </div>
             <div>
               <span class="text-gray-500">Unité:</span>
@@ -78,6 +90,7 @@
             :min="1"
             placeholder="ex: 10"
             class="w-full"
+            :disabled="isSubmitting"
           />
         </UFormField>
 
@@ -93,6 +106,7 @@
             :min="0"
             placeholder="ex: 2500"
             class="w-full"
+            :disabled="isSubmitting"
           />
         </UFormField>
 
@@ -112,6 +126,7 @@
             placeholder="Ajouter des détails supplémentaires..."
             :rows="4"
             class="w-full"
+            :disabled="isSubmitting"
           />
         </UFormField>
 
@@ -122,13 +137,20 @@
             color="neutral"
             variant="soft"
             label="Annuler"
+            :disabled="isSubmitting"
             @click="onCancel"
           />
-          <UButton type="submit" color="primary" label="Enregistrer" />
+          <UButton
+            type="submit"
+            color="primary"
+            :loading="isSubmitting"
+            :disabled="isSubmitting"
+            :label="isSubmitting ? 'Enregistrement...' : 'Enregistrer'"
+          />
         </div>
       </UForm>
     </div>
-    
+
     <!-- Empty -->
     <div v-else>
       <UEmpty icon="i-lucide-circle-minus" title="Aucun produit disponible.">
@@ -159,6 +181,7 @@ const authStore = useAuthStore();
 
 const loading = ref(true);
 const loadError = ref(false);
+const isSubmitting = ref(false); // ← État de soumission
 
 // Schéma Zod de validation
 const schema = z.object({
@@ -182,17 +205,19 @@ const state = reactive<Partial<Schema>>({
 const categoryNames = ref<Record<string, string>>({});
 
 // Inventaires enrichis avec nom de catégorie
-const inventories = ref<Array<{
-  inventory_id: string;
-  name: string;
-  unit: string;
-  category: string;
-  category_name: string;
-}>>([]);
+const inventories = ref<
+  Array<{
+    inventory_id: string;
+    name: string;
+    unit: string;
+    category: string;
+    category_name: string;
+  }>
+>([]);
 
 // Inventaires pour le select
-const selectItems = computed(function() {
-  return inventories.value.map(function(inv) {
+const selectItems = computed(function () {
+  return inventories.value.map(function (inv) {
     return {
       label: inv.name,
       value: inv.inventory_id,
@@ -201,15 +226,15 @@ const selectItems = computed(function() {
 });
 
 // Inventaire sélectionné
-const selectedInventory = computed(function() {
+const selectedInventory = computed(function () {
   if (!state.inventory_id) return null;
-  return inventories.value.find(function(inv) {
+  return inventories.value.find(function (inv) {
     return inv.inventory_id === state.inventory_id;
   });
 });
 
 // Calcul du prix total
-const totalPrice = computed(function() {
+const totalPrice = computed(function () {
   if (!state.quantity || !state.price_per_unit) return 0;
   return state.quantity * state.price_per_unit;
 });
@@ -219,7 +244,7 @@ async function loadCategoryName(categoryId: string): Promise<string> {
   if (categoryNames.value[categoryId]) {
     return categoryNames.value[categoryId];
   }
-  
+
   try {
     const category = await get<Category>("/categories/" + categoryId);
     const name = category.name || "Non catégorisé";
@@ -234,20 +259,22 @@ async function loadCategoryName(categoryId: string): Promise<string> {
 async function loadData() {
   loading.value = true;
   loadError.value = false;
-  
+
   try {
-    const response = await get<{ inventories: Inventory[]; count: number }>("/inventories");
+    const response = await get<{ inventories: Inventory[]; count: number }>(
+      "/inventories",
+    );
     const inventoryList = response?.inventories ?? [];
-    
+
     if (inventoryList.length === 0) {
       inventories.value = [];
       loading.value = false;
       return;
     }
-    
+
     // Charger les noms de catégories en parallèle
     const enrichedInventories = await Promise.all(
-      inventoryList.map(async function(inv) {
+      inventoryList.map(async function (inv) {
         const categoryName = await loadCategoryName(inv.category || "");
         return {
           inventory_id: inv.inventory_id,
@@ -256,9 +283,9 @@ async function loadData() {
           category: inv.category || "",
           category_name: categoryName,
         };
-      })
+      }),
     );
-    
+
     inventories.value = enrichedInventories;
   } catch (err) {
     console.error("Erreur lors du chargement:", err);
@@ -277,10 +304,10 @@ function reloadData() {
   loadData();
 }
 
-// Soumission du formulaire
+// Soumission du formulaire avec loading
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   const selected = selectedInventory.value;
-  
+
   if (!selected) {
     toast.add({
       title: "Erreur",
@@ -289,7 +316,9 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     });
     return;
   }
-  
+
+  isSubmitting.value = true; // ← Active le loading
+
   try {
     const purchaseData = {
       item_name: selected.name,
@@ -319,6 +348,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       description: "Une erreur est survenue lors de la création.",
       color: "error",
     });
+  } finally {
+    isSubmitting.value = false; // ← Désactive le loading
   }
 }
 
@@ -332,7 +363,7 @@ function onInventorySelect(inventoryId: string) {
   console.log("Produit sélectionné:", inventoryId);
 }
 
-onMounted(function() {
+onMounted(function () {
   loadData();
 });
 </script>

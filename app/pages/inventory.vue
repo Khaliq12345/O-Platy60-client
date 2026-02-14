@@ -63,7 +63,7 @@ import type {
   Inventory,
   InventoriesResponse,
   DayData,
-  DailyTransactionSummary
+  DailyTransactionSummary,
 } from "~/types/inventory";
 
 const { get } = useApi();
@@ -108,7 +108,7 @@ async function loadInventories() {
     console.log(response, "LOADING");
     inventoryItems.value = response?.inventories ?? [];
     query.value.total = response?.count ?? 0;
-    
+
     for (const item of inventoryItems.value) {
       transactions.value[item.inventory_id] = item.daily_transaction_summary;
     }
@@ -149,6 +149,12 @@ watch(
     currentWeek.value = {
       start_date: filterData.start_date,
       end_date: filterData.end_date,
+    };
+    query.value = {
+      page: 1,
+      limit: 5,
+      total: 0,
+      search: "",
     };
     await loadInventories();
   },
