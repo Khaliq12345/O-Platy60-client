@@ -43,12 +43,9 @@
 
     <!-- The footer -->
     <template #footer="{ collapsed }">
-      <UButton
-        :avatar="{
-          src: 'https://github.com/benjamincanac.png',
-        }"
-        :label="collapsed ? undefined : 'Benjamin'"
-        color="neutral"
+      <UAvatar
+        :text="collapsed ? undefined : auth.user?.full_name || '??'"
+        :alt="auth.user?.full_name"
         variant="ghost"
         class="w-full"
         :block="collapsed"
@@ -57,4 +54,6 @@
   </UDashboardSidebar>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+const auth = useAuthStore();
+</script>
