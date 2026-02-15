@@ -42,7 +42,7 @@ export const Navitems: NavigationMenuItem[][] = [
     {
       label: "Support",
       icon: "i-lucide-info",
-      to: "https://github.com/nuxt/ui",
+      to: "/support",
       target: "_blank",
     },
   ],

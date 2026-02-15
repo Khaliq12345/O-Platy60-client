@@ -5,11 +5,11 @@
       </template>
   
       <template #body>
-        <div class="p-1 flex flex-col h-full lg:mx-auto max-w-2xl">
+        <div class="p-1 flex flex-col h-full lg:mx-auto lg:min-w-2xl">
           <div class="w-full mb-4 px-4 flex items-center justify-between">
             <div>
               <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-                Équipe
+                Membres
               </h2>
               <p class="text-sm text-gray-500">
                 {{ users.length }} membre(s)
@@ -30,7 +30,7 @@
             <UPageCard 
               v-for="user in users" 
               :key="user.id" 
-              class="mb-3 group"
+              class="mb-3"
             >
               <div class="flex items-center justify-between w-full">
                 <div class="flex items-center gap-3">
@@ -72,7 +72,6 @@
                         variant="ghost"
                         icon="i-heroicons-trash"
                         size="xs"
-                        class="opacity-0 group-hover:opacity-100 transition-opacity"
                       />
                     </template>
                   </DeleteConfirm>

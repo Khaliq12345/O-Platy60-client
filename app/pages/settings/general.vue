@@ -5,7 +5,7 @@
       </template>
   
       <template #body>
-        <div class="mx-auto max-w-lg space-y-6">
+        <div class="mx-auto md:min-w-lg space-y-6">
           
           <!-- Carte profil principale -->
           <UPageCard variant="outline" class="relative overflow-hidden">
@@ -31,8 +31,8 @@
               </h1>
               
               <p class="text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                <UIcon name="i-heroicons-envelope" class="w-4 h-4" />
-                {{ auth.user?.email }}
+                <UIcon name="i-heroicons-envelope" />
+                <span>{{ auth.user?.email }}</span>
               </p>
   
               <UButton
