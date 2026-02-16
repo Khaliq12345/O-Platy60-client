@@ -12,7 +12,8 @@
               Envoyer une demande de support
             </h2>
             <p class="text-sm text-gray-500 mt-1">
-              Décrivez votre problème et nous vous répondrons dans les plus brefs délais.
+              Décrivez votre problème et nous vous répondrons dans les plus
+              brefs délais.
             </p>
           </div>
 
@@ -68,9 +69,17 @@ import type { FormSubmitEvent } from "@nuxt/ui";
 
 const loading = ref(false);
 
+const toast = useToast();
+
 const schema = z.object({
-  title: z.string().min(3, "Le titre doit contenir au moins 3 caractères").max(100),
-  content: z.string().min(10, "La description doit contenir au moins 10 caractères").max(2000),
+  title: z
+    .string()
+    .min(3, "Le titre doit contenir au moins 3 caractères")
+    .max(100),
+  content: z
+    .string()
+    .min(10, "La description doit contenir au moins 10 caractères")
+    .max(2000),
 });
 
 type Schema = z.output<typeof schema>;
@@ -80,15 +89,37 @@ const state = reactive<Schema>({
   content: "",
 });
 
-function onSubmit(event: FormSubmitEvent<Schema>) {
+async function onSubmit(event: FormSubmitEvent<Schema>) {
   loading.value = true;
-  
-  // Simulation envoi
-  console.log("Ticket support:", {
-    title: event.data.title,
-    content: event.data.content,
-    created_at: new Date().toISOString(),
-  });
-  
+  try {
+    const response = await $fetch("/api/contact", {
+      method: "POST",
+      body: {
+        title: event.data.title,
+        content: event.data.content,
+      },
+    });
+    if (response.success) {
+      toast.add({
+        title: "Success",
+        description: "Votre message a été envoyé.",
+        color: "success",
+      });
+      navigateTo("/dashboard");
+    } else {
+      toast.add({
+        title: "Error",
+        description: response.error,
+        color: "error",
+      });
+    }
+  } catch (error) {
+    toast.add({
+      title: "Error",
+      description: "Impossible d'envoyer le message. Veuillez réessayer.",
+      color: "error",
+    });
+    console.error("Contact form error:", error);
+  }
 }
 </script>

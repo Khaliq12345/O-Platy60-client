@@ -62,7 +62,7 @@
 </template>
 
 <script setup lang="ts">
-import { z } from "zod";
+import { number, z } from "zod";
 import type { FormSubmitEvent } from "@nuxt/ui";
 
 // Types
@@ -151,8 +151,8 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
 // Chargement des catégories
 onMounted(async () => {
   try {
-    const response = await get<Category[]>("/categories");
-    categories.value = response.map((cat) => ({
+    const response = await get<{categories: Category[], count: number}>("/categories");
+    categories.value = response.categories.map((cat) => ({
       label: cat.name,
       value: cat.id,
     }));
