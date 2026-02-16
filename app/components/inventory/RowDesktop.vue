@@ -18,7 +18,6 @@
     </div>
 
     <div class="p-4 grid grid-cols-7 gap-3">
-
       <div v-for="(day, index) in days" :key="day.date">
         <div
           class="text-xs font-medium text-gray-500 uppercase text-center mb-2"
@@ -42,6 +41,7 @@
               size="sm"
               placeholder="0"
               class="w-full"
+              @blur="emitUpdateSale(day, index)"
               @keyup.enter="emitUpdateSale(day, index)"
             />
           </UFormField>
@@ -49,8 +49,8 @@
       </div>
     </div>
 
-    <InventoryDetails 
-      v-model:open="isOpen" 
+    <InventoryDetails
+      v-model:open="isOpen"
       :inventory-id="item.inventory_id"
       :start-date="days[0]?.date"
       :end-date="days[6]?.date"
@@ -74,11 +74,9 @@ const emit = defineEmits<{
 
 const isOpen = ref(false);
 
-
 // Tableau de refs pour stocker la valeur de chaque input
 // Initialisé avec les valeurs de day.sale (0 si pas de vente)
 const saleInputs = ref<number[]>(props.days.map(() => 0));
-
 
 function toggleOpen() {
   isOpen.value = !isOpen.value;

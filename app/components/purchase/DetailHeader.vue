@@ -10,7 +10,6 @@
     </div>
 
     <div class="flex gap-3">
-      <PurchaseEdit :purchase-id="purchaseId" />
       <PurchaseDelete :item-name="itemName" :purchase-id="purchaseId" />
     </div>
   </div>

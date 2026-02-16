@@ -8,14 +8,14 @@ export const Navitems: NavigationMenuItem[][] = [
       to: "/dashboard",
     },
     {
+      label: "Catégories",
+      icon: "i-lucide-list",
+      to: "/categories",
+    },
+    {
       label: "Achats",
       icon: "i-lucide-inbox",
       to: "/purchases",
-    },
-    {
-      label: "Transformations",
-      icon: "i-lucide-replace-all",
-      to: "/transformations",
     },
     {
       label: "Inventaire",
@@ -29,27 +29,20 @@ export const Navitems: NavigationMenuItem[][] = [
       children: [
         {
           label: "General",
+          to: "/settings/general",
         },
         {
           label: "Members",
-        },
-        {
-          label: "Notifications",
+          to: "/settings/members",
         },
       ],
     },
   ],
   [
     {
-      label: "Feedback",
-      icon: "i-lucide-message-circle",
-      to: "https://github.com/nuxt-ui-templates/dashboard",
-      target: "_blank",
-    },
-    {
-      label: "Help & Support",
+      label: "Support",
       icon: "i-lucide-info",
-      to: "https://github.com/nuxt/ui",
+      to: "/support",
       target: "_blank",
     },
   ],

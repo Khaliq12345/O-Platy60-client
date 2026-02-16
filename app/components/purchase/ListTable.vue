@@ -67,14 +67,12 @@
 <script setup lang="ts">
 import { h, resolveComponent, ref } from "vue";
 import type { TableColumn } from "@nuxt/ui";
-import type { Row } from "@tanstack/vue-table";
 import type { PurchaseItem } from "~/types/purchase";
 import type { Category } from "~/types/category";
 
 const UButton = resolveComponent("UButton");
 const UBadge = resolveComponent("UBadge");
 const UDropdownMenu = resolveComponent("UDropdownMenu");
-const PurchaseEdit = resolveComponent("PurchaseEdit");
 const PurchaseDelete = resolveComponent("PurchaseDelete");
 
 const props = defineProps<{
@@ -277,11 +275,6 @@ const columns: TableColumn<PurchaseItem>[] = [
                 block: true,
                 class: "justify-start",
                 onClick: () => navigateTo(`/purchases/${row.original.id}`),
-              }),
-
-              // Edit component
-              h(PurchaseEdit, {
-                purchaseId: row.original.id,
               }),
 
               h("div", { class: "h-px bg-gray-200 dark:bg-gray-800 my-1" }), // Custom Separator
