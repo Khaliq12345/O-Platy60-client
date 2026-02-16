@@ -20,6 +20,7 @@
 
     <Loading v-if="loading" />
 
+    <!-- // THe listing of the categories -->
     <UPageList v-else class="grow md:px-4">
       <UPageCard v-for="category in categories" :key="category.id" class="mb-4">
         <div class="flex items-center justify-between w-full">
@@ -27,6 +28,7 @@
             {{ category.name }}
           </span>
 
+          <!-- // Action buttons for each category -->
           <div class="flex items-center gap-1">
             <UButton
               color="neutral"
@@ -57,6 +59,7 @@
         </div>
       </UPageCard>
 
+      <!-- Display this if no category is found -->
       <div
         v-if="categories.length === 0"
         class="text-center py-8 text-gray-500"
@@ -65,6 +68,7 @@
       </div>
     </UPageList>
 
+    <!-- Pagination section -->
     <LimitPagination
       :page="query.page"
       :limit="query.limit"
@@ -84,6 +88,7 @@
       "
     />
 
+    <!-- This is the popup modal to edit the category -->
     <CategoryEdit
       v-model:open="isEditModalOpen"
       :category="selectedCategory"
