@@ -107,7 +107,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         description: "Votre message a été envoyé.",
         color: "success",
       });
-      navigateTo("/dashboard");
+      navigateTo("/");
     } else {
       toast.add({
         title: "Error",
@@ -123,5 +123,6 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     });
     console.error("Contact form error:", error);
   }
+  loading.value = false;
 }
 </script>

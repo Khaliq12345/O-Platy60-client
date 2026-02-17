@@ -97,7 +97,7 @@ export default defineEventHandler(async (event) => {
     });
   
     try {
-      const toEmail = "contact@tech2work.tech";
+      const toEmail = "lanhajames@gmail.com";
       const info = await transporter.sendMail({ 
         from: `"O-Platy-60 Support" <${config.public.smtpUser}>`,
         replyTo: userMail,
