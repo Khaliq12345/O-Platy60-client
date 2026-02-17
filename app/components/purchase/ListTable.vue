@@ -179,7 +179,7 @@ const columns: TableColumn<PurchaseItem>[] = [
   },
   {
     accessorKey: "item_name",
-    header: "Article",
+    header: "Ingrédient",
     cell: ({ row }) =>
       h(
         "div",

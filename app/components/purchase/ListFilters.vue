@@ -49,22 +49,23 @@ const emit = defineEmits<{
 
 const searchQuery = ref("");
 const dateRange = ref();
+const selectedCategory = ref<string | undefined>(undefined);
 
 // Injection des catégories (même logique que FilterForm.vue)
 const categories = inject<Ref<Category[]>>("categories", ref([]));
 const query = defineModel("query");
 
 const updateQuery = computed(() => {
+  console.log("UPDATE FILTER ", selectedCategory);
   query.value = {
     search: searchQuery.value,
     start_date: dateRange.value.start,
     end_date: dateRange.value.end,
     category_id: selectedCategory.value,
   };
+  console.log("FILTER 2 ", query);
   return query.value;
 });
-// État local de la catégorie sélectionnée
-const selectedCategory = ref<string | undefined>(undefined);
 
 // Options du select
 const categoryOptions = computed(() => [

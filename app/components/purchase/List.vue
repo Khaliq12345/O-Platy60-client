@@ -42,6 +42,10 @@
 import type { Category } from "~/types/category";
 import type { PurchaseItem } from "~/types/purchase";
 
+// Use this two to dynamically handle the updated of the query parameters
+const route = useRoute();
+const router = useRouter();
+
 const { get } = useApi();
 
 const purchases = ref<PurchaseItem[]>([]);
@@ -51,18 +55,32 @@ const categories = ref<Category[]>([]);
 provide("categories", categories);
 
 const loading = ref(true);
+
+// Contains only page and limit filters
 const query = ref({
-  page: 1,
-  limit: 20,
+  page: Number(route.query.page) || 1,
+  limit: Number(route.query.limit) || 20,
   total: 100,
 });
-const filterQuery = ref();
 
+// Contains dynamic filters
+const filterQuery = ref({
+  search: route.query.search,
+  category_id: route.query.category_id,
+  ingredient: route.query.ingredient,
+  start_date: route.query.start_date,
+  end_date: route.query.end_date,
+});
+
+// Loading Categories data
 async function loadCategories() {
-  const res = await get<{categories: Category[], count: number}>("/categories");
+  const res = await get<{ categories: Category[]; count: number }>(
+    "/categories",
+  );
   categories.value = res.categories;
 }
 
+// Loading purchases data
 async function loadPurchases() {
   loading.value = true;
   interface ApiResponse {
@@ -73,6 +91,11 @@ async function loadPurchases() {
     const response = await get<ApiResponse>("/purchases", query.value);
     purchases.value = response.purchases;
     query.value.total = response.count;
+    query.value = {
+      page: Number(route.query.page) || 1,
+      limit: Number(route.query.limit) || 20,
+      total: 100,
+    };
   } catch (error) {
     console.log(error);
   } finally {
@@ -80,8 +103,10 @@ async function loadPurchases() {
   }
 }
 
+// Update filters and reload purchases
 function handleFilter() {
   query.value = { ...query.value, ...filterQuery.value };
+  router.replace({ query: query.value });
   loadPurchases();
 }
 
@@ -91,6 +116,6 @@ function handleExport() {
 
 onMounted(() => {
   loadCategories();
-  loadPurchases();
+  handleFilter();
 });
 </script>

@@ -1,9 +1,6 @@
 import nodemailer from "nodemailer";
 
-function generateEmailHtml(
-  title: string,
-  description: string,
-): string {
+function generateEmailHtml(title: string, description: string): string {
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -82,40 +79,40 @@ function escapeHtml(unsafe: string): string {
 }
 
 export default defineEventHandler(async (event) => {
-    const body = await readBody(event);
-    const config = useRuntimeConfig();
-    const { title, description, userMail } = body;
-  
-    const transporter = nodemailer.createTransport({
-      host: config.public.smtpServer,
-      port: Number(config.public.smtpPort),
-      secure: false,
-      auth: {
-        user: config.public.smtpUser,
-        pass: config.public.smtpPassword,
-      },
-    });
-  
-    try {
-      const toEmail = "lanhajames@gmail.com";
-      const info = await transporter.sendMail({ 
-        from: `"O-Platy-60 Support" <${config.public.smtpUser}>`,
-        replyTo: userMail,
-        to: toEmail,
-        subject: `[Support] ${title}`,
-        text: description,
-        html: generateEmailHtml(title, description),
-      });
-  
-      return {
-        success: true,
-        messageId: info.messageId,
-      };
-    } catch (err: any) {
-      console.error(err);
-      return {
-        success: false,
-        error: err.message,
-      };
-    }
+  const body = await readBody(event);
+  const config = useRuntimeConfig();
+  const { title, description, userMail } = body;
+
+  const transporter = nodemailer.createTransport({
+    host: config.public.smtpServer,
+    port: Number(config.public.smtpPort),
+    secure: false,
+    auth: {
+      user: config.public.smtpUser,
+      pass: config.public.smtpPassword,
+    },
   });
+
+  try {
+    const toEmail = "contact@tech2work.tech";
+    const info = await transporter.sendMail({
+      from: `"O-Platy-60 Support" <${config.public.smtpUser}>`,
+      replyTo: userMail,
+      to: toEmail,
+      subject: `[Support] ${title}`,
+      text: description,
+      html: generateEmailHtml(title, description),
+    });
+
+    return {
+      success: true,
+      messageId: info.messageId,
+    };
+  } catch (err: any) {
+    console.error(err);
+    return {
+      success: false,
+      error: err.message,
+    };
+  }
+});

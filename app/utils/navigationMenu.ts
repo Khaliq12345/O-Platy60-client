@@ -13,14 +13,34 @@ export const Navitems: NavigationMenuItem[][] = [
       to: "/categories",
     },
     {
-      label: "Achats",
+      label: "Details d'Achats",
       icon: "i-lucide-inbox",
-      to: "/purchases",
+      defaultOpen: true,
+      children: [
+        {
+          label: "Ingrédient",
+          to: "/ingredients",
+        },
+        {
+          label: "Achats",
+          to: "/purchases",
+        },
+      ],
     },
     {
-      label: "Inventaire",
+      label: "Details des Inventaire",
       icon: "i-lucide-package",
-      to: "/inventory",
+      defaultOpen: true,
+      children: [
+        {
+          label: "Produits",
+          to: "/produits",
+        },
+        {
+          label: "Inventaire",
+          to: "/inventory",
+        },
+      ],
     },
     {
       label: "Parametres",
