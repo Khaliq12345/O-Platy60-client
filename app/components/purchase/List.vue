@@ -59,7 +59,8 @@ const query = ref({
 const filterQuery = ref();
 
 async function loadCategories() {
-  categories.value = await get<Category[]>("/categories");
+  const res = await get<{categories: Category[], count: number}>("/categories");
+  categories.value = res.categories;
 }
 
 async function loadPurchases() {

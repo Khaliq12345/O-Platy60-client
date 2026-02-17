@@ -2,7 +2,7 @@
   <UModal
     v-model:open="isOpen"
     title="Modifier le profil"
-    description="Confirmez votre identité pour modifier vos informations"
+    description="Mettez à jour vos informations personnelles"
   >
     <template #content>
       <UForm
@@ -11,54 +11,14 @@
         class="p-4 space-y-4"
         @submit="onSubmit"
       >
-        <!-- Section modifications -->
-        <div class="space-y-4 pb-4 border-b border-gray-200 dark:border-gray-800">
-          <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">
-            Nouvelles informations
-          </h3>
-          
-          <UFormField label="Nom complet" name="full_name" required>
-            <UInput
-              v-model="state.full_name"
-              placeholder="Votre nom complet"
-              icon="i-heroicons-user"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField label="Email" name="email" required>
-            <UInput
-              v-model="state.email"
-              type="email"
-              placeholder="votre@email.com"
-              icon="i-heroicons-envelope"
-              class="w-full"
-            />
-          </UFormField>
-        </div>
-
-        <!-- Section vérification -->
-        <div class="space-y-4">
-          <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2">
-            <UIcon name="i-heroicons-shield-check" class="w-4 h-4" />
-            Vérification requise
-          </h3>
-          
-          <UFormField 
-            label="Mot de passe actuel" 
-            name="current_password" 
-            required
-            help="Entrez votre mot de passe pour confirmer les changements"
-          >
-            <UInput
-              v-model="state.current_password"
-              type="password"
-              placeholder="••••••••"
-              icon="i-heroicons-lock-closed"
-              class="w-full"
-            />
-          </UFormField>
-        </div>
+        <UFormField label="Nom complet" name="full_name" required>
+          <UInput
+            v-model="state.full_name"
+            placeholder="Votre nom complet"
+            icon="i-heroicons-user"
+            class="w-full"
+          />
+        </UFormField>
 
         <div class="flex justify-end gap-2 pt-4">
           <UButton
@@ -71,7 +31,7 @@
             type="submit"
             color="primary"
             :loading="loading"
-            label="Enregistrer les modifications"
+            label="Enregistrer"
           />
         </div>
       </UForm>
@@ -101,30 +61,31 @@ const toast = useToast();
 const isOpen = defineModel("open", { default: false });
 const loading = ref(false);
 
+// Schema only validates what we're actually editing
 const schema = z.object({
   full_name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
-  email: z.email("Email invalide"),
-  current_password: z.string().min(1, "Le mot de passe est requis pour confirmer"),
 });
 
 type Schema = z.output<typeof schema>;
 
 const state = reactive<Schema>({
-  full_name: auth.user?.full_name ?? "",
-  email: auth.user?.email ?? "",
-  current_password: "",
+  full_name: auth.user?.full_name ?? ""
+});
+
+// Reset form when modal opens
+watch(isOpen, (open) => {
+  if (open) {
+    state.full_name = auth.user?.full_name ?? "";
+  }
 });
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
-  if (!auth.user?.id || !auth.user?.email) return;
+  if (!auth.user?.id) return;
   
   loading.value = true;
   try {
     await put<User>(`/users/${auth.user.id}`, {
       full_name: event.data.full_name,
-      email: event.data.email,
-      current_email: auth.user.email,
-      password: event.data.current_password,
     });
     
     toast.add({
@@ -136,19 +97,11 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     emit("updated");
     isOpen.value = false;
   } catch (error: any) {
-    if (error.statusCode === 401 || error.message?.includes("password") || error.message?.includes("auth")) {
-      toast.add({
-        title: "Erreur d'authentification",
-        description: "Mot de passe incorrect ou session expirée",
-        color: "error",
-      });
-    } else {
-      toast.add({
-        title: "Erreur",
-        description: "Impossible de mettre à jour le profil",
-        color: "error",
-      });
-    }
+    toast.add({
+      title: "Erreur",
+      description: error.message || "Impossible de mettre à jour le profil",
+      color: "error",
+    });
   } finally {
     loading.value = false;
   }

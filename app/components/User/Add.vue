@@ -82,7 +82,6 @@
 <script setup lang="ts">
 import { z } from "zod";
 import type { FormSubmitEvent } from "@nuxt/ui";
-import type { UserRole } from "~/types/user";
 import { Role } from '~/types/enums'
 
 const emit = defineEmits<{
@@ -124,7 +123,7 @@ const state = reactive<Schema>({
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   loading.value = true;
   try {
-    await post("/users", {
+    await post("/auth/signup", {
       full_name: event.data.full_name,
       email: event.data.email,
       role: event.data.role,

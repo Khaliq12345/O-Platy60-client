@@ -8,6 +8,10 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBaseUrl: "http://localhost:8000/v1",
+      smtpServer: process.env.SMTP_SERVER,
+      smtpPort: process.env.SMTP_PORT,
+      smtpUser: process.env.SMTP_USERNAME,
+      smtpPassword: process.env.SMTP_PASSWORD,
     },
   },
 
