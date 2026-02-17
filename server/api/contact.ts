@@ -58,7 +58,7 @@ function generateEmailHtml(
                     <tr>
                         <td style="background: linear-gradient(to bottom, #450a0a 0%, #7f1d1d 100%); padding: 25px; text-align: center; border-radius: 0 0 16px 16px;">
                             <p style="color: #fca5a5; font-size: 14px; margin: 0; font-weight: 500;">
-                                © 2024 O-Platy-60. Tous droits réservés.
+                                © 2026 O-Platy-60. Tous droits réservés.
                             </p>
                         </td>
                     </tr>
@@ -82,39 +82,40 @@ function escapeHtml(unsafe: string): string {
 }
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event);
-  const config = useRuntimeConfig();
-  const { title, description, userMail } = body;
-
-  const transporter = nodemailer.createTransport({
-    host: config.public.smtpServer,
-    port: Number(config.public.smtpPort),
-    secure: false,
-    auth: {
-      user: config.public.smtpUser,
-      pass: config.public.smtpPassword,
-    },
-  });
-
-  try {
-    const toEmail = "contact@tech2work.tech";
-    const info = transporter.sendMail({
-      from: userMail,
-      to: toEmail,
-      subject: title,
-      text: description,
-      html: generateEmailHtml(title, description),
+    const body = await readBody(event);
+    const config = useRuntimeConfig();
+    const { title, description, userMail } = body;
+  
+    const transporter = nodemailer.createTransport({
+      host: config.public.smtpServer,
+      port: Number(config.public.smtpPort),
+      secure: false,
+      auth: {
+        user: config.public.smtpUser,
+        pass: config.public.smtpPassword,
+      },
     });
-
-    return {
-      success: true,
-      messageId: info.messageId,
-    };
-  } catch (err: any) {
-    console.error(err);
-    return {
-      success: false,
-      error: err.message,
-    };
-  }
-});
+  
+    try {
+      const toEmail = "lanhajames@gmail.com";
+      const info = await transporter.sendMail({ 
+        from: `"O-Platy-60 Support" <${config.public.smtpUser}>`,
+        replyTo: userMail,
+        to: toEmail,
+        subject: `[Support] ${title}`,
+        text: description,
+        html: generateEmailHtml(title, description),
+      });
+  
+      return {
+        success: true,
+        messageId: info.messageId,
+      };
+    } catch (err: any) {
+      console.error(err);
+      return {
+        success: false,
+        error: err.message,
+      };
+    }
+  });

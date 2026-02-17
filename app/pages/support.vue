@@ -67,6 +67,7 @@
 import { z } from "zod";
 import type { FormSubmitEvent } from "@nuxt/ui";
 
+const auth = useAuthStore();
 const loading = ref(false);
 
 const toast = useToast();
@@ -96,7 +97,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       method: "POST",
       body: {
         title: event.data.title,
-        content: event.data.content,
+        description: event.data.content,
+        userMail: auth.user?.email || "noreply@oplaty60.com",
       },
     });
     if (response.success) {
@@ -105,7 +107,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         description: "Votre message a été envoyé.",
         color: "success",
       });
-      navigateTo("/dashboard");
+      navigateTo("/");
     } else {
       toast.add({
         title: "Error",
@@ -121,5 +123,6 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     });
     console.error("Contact form error:", error);
   }
+  loading.value = false;
 }
 </script>
