@@ -67,6 +67,7 @@
 import { z } from "zod";
 import type { FormSubmitEvent } from "@nuxt/ui";
 
+const auth = useAuthStore();
 const loading = ref(false);
 
 const toast = useToast();
@@ -96,7 +97,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       method: "POST",
       body: {
         title: event.data.title,
-        content: event.data.content,
+        description: event.data.content,
+        userMail: auth.user?.email || "noreply@oplaty60.com",
       },
     });
     if (response.success) {
