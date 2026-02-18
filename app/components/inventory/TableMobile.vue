@@ -27,43 +27,49 @@
         }"
         arrows
       >
-        <div class="w-[70%] mx-auto px-3 py-2 rounded-md bg-gray-200/50 dark:bg-gray-800/50">
-          <div class="text-sm font-semibold text-primary mb-3">
-            {{ formatDayFull(day.date) }}
-          </div>
+        <UPageCard
+          class="w-[70%] mx-auto"
+        >
+          <template #title>
+            <span class="text-primary font-semibold">
+              {{ formatDayFull(day.date) }}
+            </span>
+          </template>
 
-          <div class="space-y-3">
-            <!-- Initial -->
-            <div>
-              <div class="text-xs text-gray-400 uppercase mb-1">Initial</div>
-              <div class="text-lg font-medium text-gray-900 dark:text-white">
-                {{ getEntry(item.inventory_id, day.date) }}
+          <template #description>
+            <div class="space-y-3">
+              <!-- Initial -->
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-gray-400 uppercase">Initial</span>
+                <span class="text-lg font-medium text-gray-900 dark:text-white">
+                  {{ getEntry(item.inventory_id, day.date) }}
+                </span>
+              </div>
+
+              <!-- Sortie -->
+              <div>
+                <div class="text-xs text-primary uppercase mb-1">Sortie</div>
+                <UInputNumber
+                  v-model.number="saleInputs[item.inventory_id][idx]"
+                  :min="0"
+                  size="lg"
+                  class="w-full"
+                  color="primary"
+                  placeholder="0"
+                  @blur="updateSale(item, day, idx)"
+                />
+              </div>
+
+              <!-- Stock final -->
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-gray-400 uppercase">Stock final</span>
+                <span class="text-lg font-medium text-gray-900 dark:text-white">
+                  {{ calculateStock(item.inventory_id, day.date, idx) }}
+                </span>
               </div>
             </div>
-
-            <!-- Sortie -->
-            <div>
-              <div class="text-xs text-primary uppercase mb-1">Sortie</div>
-              <UInputNumber
-                v-model.number="saleInputs[item.inventory_id][idx]"
-                :min="0"
-                size="lg"
-                class="w-full"
-                color="primary"
-                placeholder="0"
-                @blur="updateSale(item, day, idx)"
-              />
-            </div>
-
-            <!-- Stock final -->
-            <div>
-              <div class="text-xs text-gray-400 uppercase mb-1">Stock final</div>
-              <div class="text-lg font-medium text-gray-900 dark:text-white">
-                {{ calculateStock(item.inventory_id, day.date, idx) }}
-              </div>
-            </div>
-          </div>
-        </div>
+          </template>
+        </UPageCard>
       </UCarousel>
 
       <!-- Summary -->
