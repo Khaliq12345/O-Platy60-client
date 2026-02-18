@@ -34,7 +34,7 @@ export const Navitems: NavigationMenuItem[][] = [
       children: [
         {
           label: "Produits",
-          to: "/produits",
+          to: "/products",
         },
         {
           label: "Inventaire",
