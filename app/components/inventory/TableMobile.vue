@@ -7,66 +7,64 @@
     >
       <!-- Header -->
       <div class="p-2 flex items-center justify-between">
-          <h3 class="font-semibold text-gray-900 dark:text-white truncate">
-            {{ item.name }}
-          </h3>
-          <p class="flex items-center gap-2 mt-1 flex-wrap">
-            <span class="text-xs text-gray-500">
-              {{ getCurrentStock(item) }} {{ item.unit }}
-            </span>
-          </p>
+        <h3 class="font-semibold text-gray-900 dark:text-white truncate">
+          {{ item.name }}
+        </h3>
+        <p class="flex items-center gap-2 mt-1 flex-wrap">
+          <span class="text-xs text-gray-500">
+            {{ getCurrentStock(item) }} {{ item.unit }}
+          </span>
+        </p>
       </div>
 
       <!-- Days Carousel -->
-      <div>
-        <div 
-          ref="carouselRef"
-          class="pl-2 flex gap-2 overflow-x-auto snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
-          @scroll="handleScroll"
-        >
-          <div
-            v-for="(day, idx) in days"
-            :key="day.date"
-            class="shrink-0 w-[50%] snap-center px-3 py-2 rounded-md bg-gray-200/50 dark:bg-gray-800/50"
-          >
-            <div class="text-sm font-semibold text-primary mb-3">
-              {{ formatDayFull(day.date) }}
+      <UCarousel
+        v-slot="{ item: day, index: idx }"
+        :items="days"
+        :ui="{
+          item: 'basis-1/1 px-1',
+          container: 'gap-2 py-2',
+        }"
+        arrows
+      >
+        <div class="w-[70%] mx-auto px-3 py-2 rounded-md bg-gray-200/50 dark:bg-gray-800/50">
+          <div class="text-sm font-semibold text-primary mb-3">
+            {{ formatDayFull(day.date) }}
+          </div>
+
+          <div class="space-y-3">
+            <!-- Initial -->
+            <div>
+              <div class="text-xs text-gray-400 uppercase mb-1">Initial</div>
+              <div class="text-lg font-medium text-gray-900 dark:text-white">
+                {{ getEntry(item.inventory_id, day.date) }}
+              </div>
             </div>
-            
-            <div class="space-y-3">
-              <!-- Initial -->
-              <div>
-                <div class="text-xs text-gray-400 uppercase mb-1">Initial</div>
-                <div class="text-lg font-medium text-gray-900 dark:text-white">
-                  {{ getEntry(item.inventory_id, day.date) }}
-                </div>
-              </div>
 
-              <!-- Sortie -->
-              <div>
-                <div class="text-xs text-primary uppercase mb-1">Sortie</div>
-                <UInputNumber
-                  v-model.number="saleInputs[item.inventory_id][idx]"
-                  :min="0"
-                  size="lg"
-                  class="w-full"
-                  color="primary"
-                  placeholder="0"
-                  @blur="updateSale(item, day, idx)"
-                />
-              </div>
+            <!-- Sortie -->
+            <div>
+              <div class="text-xs text-primary uppercase mb-1">Sortie</div>
+              <UInputNumber
+                v-model.number="saleInputs[item.inventory_id][idx]"
+                :min="0"
+                size="lg"
+                class="w-full"
+                color="primary"
+                placeholder="0"
+                @blur="updateSale(item, day, idx)"
+              />
+            </div>
 
-              <!-- Stock final -->
-              <div>
-                <div class="text-xs text-gray-400 uppercase mb-1">Stock final</div>
-                <div class="text-lg font-medium text-gray-900 dark:text-white">
-                  {{ calculateStock(item.inventory_id, day.date, idx) }}
-                </div>
+            <!-- Stock final -->
+            <div>
+              <div class="text-xs text-gray-400 uppercase mb-1">Stock final</div>
+              <div class="text-lg font-medium text-gray-900 dark:text-white">
+                {{ calculateStock(item.inventory_id, day.date, idx) }}
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </UCarousel>
 
       <!-- Summary -->
       <div class="px-4 pb-4">
@@ -109,7 +107,6 @@ const toast = useToast();
 
 const saleInputs = ref<Record<string, number[]>>({});
 const openSummaries = ref<Record<string, boolean>>({});
-const currentDayIndex = ref(0);
 
 watch(() => props.items, (newItems) => {
   newItems.forEach((item) => {
@@ -150,13 +147,6 @@ function getCurrentStock(item: Inventory): number {
 
 function toggleSummary(inventoryId: string) {
   openSummaries.value[inventoryId] = !openSummaries.value[inventoryId];
-}
-
-function handleScroll(e: Event) {
-  const target = e.target as HTMLElement;
-  const scrollLeft = target.scrollLeft;
-  const cardWidth = target.offsetWidth * 0.85;
-  currentDayIndex.value = Math.round(scrollLeft / cardWidth);
 }
 
 async function updateSale(item: Inventory, day: DayData, index: number) {
