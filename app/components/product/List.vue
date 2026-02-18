@@ -1,0 +1,191 @@
+<template>
+  <div class="p-1 flex flex-col justify-between h-full lg:mx-auto">
+    <div class="mb-2">
+      <ProductListHeader />
+      <ProductListFilters
+        @filter="handleFilter"
+        @export="handleExport"
+        v-model:query="filterQuery"
+      />
+    </div>
+
+    <Loading v-if="loading" />
+
+    <ProductListTable
+      v-else
+      :products="products"
+      :categories="categories"
+      :ingredients="ingredients"
+      @edit="onEdit"
+      @delete="onDelete"
+      class="grow"
+    />
+
+    <LimitPagination
+      :page="query.page"
+      :limit="query.limit"
+      :total="query.total"
+      @change-page="
+        (val: number) => {
+          query.page = val;
+          loadProducts();
+        }
+      "
+      @change-limit="
+        (val: { limit: number; page: number }) => {
+          query.limit = val.limit;
+          query.page = val.page;
+          loadProducts();
+        }
+      "
+    />
+
+    <!-- Modales -->
+
+    <ProductEdit
+      :open="showEdit"
+      :product="selectedProduct"
+      @update:open="showEdit = $event"
+      @updated="loadProducts"
+    />
+  </div>
+</template>
+
+<script setup lang="ts">
+import type { Category } from "~/types/category";
+import type { Product } from "~/types/product";
+import type { Ingredient } from "~/types/ingredient";
+
+const route = useRoute();
+const router = useRouter();
+const { get, del } = useApi();
+const toast = useToast();
+
+const products = ref<Product[]>([]);
+const categories = ref<Category[]>([]);
+const ingredients = ref<Ingredient[]>([]);
+
+provide("categories", categories);
+provide("ingredients", ingredients);
+
+const loading = ref(true);
+const showEdit = ref(false);
+const selectedProduct = ref<Product | undefined>(undefined);
+
+const query = ref({
+  page: Number(route.query.page) || 1,
+  limit: Number(route.query.limit) || 20,
+  total: 0,
+});
+
+const filterQuery = ref({
+  search: route.query.search as string | undefined,
+  category_id: route.query.category_id as string | undefined,
+  ingredient_id: route.query.ingredient_id as string | undefined,
+});
+
+async function loadCategories() {
+  try {
+    const res = await get<{ categories: Category[]; count: number }>(
+      "/categories",
+    );
+    categories.value = res.categories;
+  } catch (error) {
+    toast.add({
+      title: "Erreur",
+      description: "Impossible de charger les catégories",
+      color: "error",
+    });
+  }
+}
+
+async function loadIngredients() {
+  try {
+    const res = await get<{ ingredients: Ingredient[]; count: number }>(
+      "/ingredients",
+    );
+    ingredients.value = res.ingredients;
+  } catch (error) {
+    toast.add({
+      title: "Erreur",
+      description: "Impossible de charger les ingrédients",
+      color: "error",
+    });
+  }
+}
+
+async function loadProducts() {
+  loading.value = true;
+  try {
+    const params = {
+      limit: query.value.limit,
+      offset: (query.value.page - 1) * query.value.limit,
+      name: filterQuery.value.search,
+      category: filterQuery.value.category_id,
+      ingredient_id: filterQuery.value.ingredient_id,
+    };
+
+    const response = await get<{
+      products: Product[];
+      count: number;
+    }>("/products", params);
+
+    products.value = response.products;
+    query.value.total = response.count;
+  } catch (error) {
+    toast.add({
+      title: "Erreur",
+      description: "Impossible de charger les produits",
+      color: "error",
+    });
+  } finally {
+    loading.value = false;
+  }
+}
+
+function handleFilter() {
+  query.value.page = 1;
+  const mergedQuery = {
+    page: query.value.page,
+    limit: query.value.limit,
+    ...filterQuery.value,
+  };
+  router.replace({ query: mergedQuery });
+  loadProducts();
+}
+
+function handleExport() {
+  console.log("Export CSV");
+}
+
+function onEdit(item: Product) {
+  selectedProduct.value = item;
+  showEdit.value = true;
+}
+
+async function onDelete(item: Product) {
+  if (!confirm(`Supprimer "${item.name}" ?`)) return;
+
+  try {
+    await del(`/products/${item.product_id}`);
+    toast.add({
+      title: "Succès",
+      description: "Produit supprimé",
+      color: "success",
+    });
+    loadProducts();
+  } catch (error) {
+    toast.add({
+      title: "Erreur",
+      description: "Impossible de supprimer",
+      color: "error",
+    });
+  }
+}
+
+onMounted(() => {
+  loadCategories();
+  loadIngredients();
+  loadProducts();
+});
+</script>

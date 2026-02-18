@@ -93,7 +93,7 @@
             class="grow"
           />
           <!-- Slot filtres dans le drawer (mobile uniquement) -->
-          <div class="gap-2 flex flex-row items-center">
+          <div class="gap-2 flex flex-col sm:flex-row items-center">
             <slot name="filters" />
             <UInputDate
               ref="inputDate"

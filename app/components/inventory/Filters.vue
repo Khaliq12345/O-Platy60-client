@@ -16,9 +16,6 @@
         @click="handleSearch"
       />
     </div>
-
-    <!-- Sélecteur de semaine -->
-    <InventoryWeekSelector />
   </div>
 </template>
 

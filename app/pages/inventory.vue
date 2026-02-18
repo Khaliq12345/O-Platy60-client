@@ -5,60 +5,31 @@
     </template>
 
     <template #body>
-      <div class="lg:p-6 lg:space-y-6">
-        <div class="flex flex-col gap-4">
-          <InventoryHeader />
-          <InventoryAdd @added="loadInventories" />
+      <div class="lg:p-6 lg:space-y-6 space-y-4">
+        <InventoryHeader />
 
-          <InventoryFilters />
+        <div class="grid gap-2 items-center grid-cols-1 md:grid-cols-3">
+          <InventoryWeekSelector />
+          <InventoryFilters class="md:col-span-2"/>
         </div>
 
         <Loading v-if="loading" />
 
-        <div v-else>
-          <div class="space-y-4">
-            <InventoryRow
-              v-for="item in inventoryItems"
-              :key="item.inventory_id"
-              :item="item"
-              :days="getDaysForInventory(item.inventory_id)"
-              @transaction-updated="loadInventories"
-            />
-          </div>
+        <InventoryTable
+          v-else-if="inventoryItems.length > 0"
+          :items="inventoryItems"
+          :days="weekDays"
+          :transactions="transactions"
+        />
 
-          <div
-            v-if="inventoryItems.length === 0"
-            class="text-center py-12 text-gray-500"
-          >
-            Aucun inventaire trouvé
-          </div>
-
-          <LimitPagination
-            :page="query.page"
-            :limit="query.limit"
-            :total="query.total"
-            @change-page="
-              (val: number) => {
-                query.page = val;
-                loadInventories();
-              }
-            "
-            @change-limit="
-              (val: any) => {
-                query.limit = val.limit;
-                query.page = val.page;
-                loadInventories();
-              }
-            "
-          />
-        </div>
+        <InventoryEmptyState v-else />
       </div>
     </template>
   </UDashboardPanel>
 </template>
 
 <script setup lang="ts">
-import { addDays, format } from "date-fns";
+import { addDays, format, startOfWeek } from "date-fns";
 import type {
   Inventory,
   InventoriesResponse,
@@ -70,47 +41,39 @@ const { get } = useApi();
 
 const loading = ref(true);
 const inventoryItems = ref<Inventory[]>([]);
-
 const transactions = ref<Record<string, DailyTransactionSummary[]>>({});
-const currentWeek = ref<{ start_date: string; end_date: string } | null>(null);
-const query = ref({
-  page: 1,
-  limit: 5,
-  total: 0,
-  search: "",
-});
+const currentWeekStart = ref(startOfWeek(new Date(), { weekStartsOn: 1 }));
 
 const weekDays = computed((): DayData[] => {
-  if (!currentWeek.value) return [];
-
-  const days: DayData[] = [];
-  const start = new Date(currentWeek.value.start_date + "T12:00:00");
-
-  for (let i = 0; i < 7; i++) {
-    const date = addDays(start, i);
-    days.push({
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = addDays(currentWeekStart.value, i);
+    return {
       date: format(date, "yyyy-MM-dd"),
       entry: 0,
       sale: 0,
-    });
-  }
-
-  return days;
+    };
+  });
 });
 
+provide("weekStart", currentWeekStart);
+
+watch(currentWeekStart, () => {
+  loadInventories();
+}, { immediate: true });
+
 async function loadInventories() {
+  loading.value = true;
   try {
-    loading.value = true;
-    const params: any = { ...query.value };
-    if (!params.search) delete params.search;
+    const params = {
+      start_date: format(currentWeekStart.value, "yyyy-MM-dd"),
+      end_date: format(addDays(currentWeekStart.value, 6), "yyyy-MM-dd"),
+    };
 
     const response = await get<InventoriesResponse>("/inventories", params);
-    console.log(response, "LOADING");
     inventoryItems.value = response?.inventories ?? [];
-    query.value.total = response?.count ?? 0;
 
     for (const item of inventoryItems.value) {
-      transactions.value[item.inventory_id] = item.daily_transaction_summary;
+      transactions.value[item.inventory_id] = item.daily_transaction_summary ?? [];
     }
   } catch (error) {
     inventoryItems.value = [];
@@ -119,53 +82,15 @@ async function loadInventories() {
   }
 }
 
-function getDaysForInventory(inventoryId: string): DayData[] {
-  const inventoryTxs = transactions.value[inventoryId] ?? [];
-
-  return weekDays.value.map((day) => {
-    const tx = inventoryTxs.find((t) => t.summary_date === day.date);
-
-    return {
-      ...day,
-      entry: tx?.total_quantity ?? 0,
-      sale: tx?.total_sales ?? 0,
-    };
-  });
-}
-
 const filterData = reactive({
   search: "",
-  weekNumber: 1,
   start_date: "",
   end_date: "",
 });
 
 provide("filterInfo", filterData);
 
-watch(
-  () => filterData.start_date,
-  async () => {
-    console.log("Start Date Updated");
-    currentWeek.value = {
-      start_date: filterData.start_date,
-      end_date: filterData.end_date,
-    };
-    query.value = {
-      page: 1,
-      limit: 5,
-      total: 0,
-      search: "",
-    };
-    await loadInventories();
-  },
-);
-
-watch(
-  () => filterData.search,
-  async () => {
-    console.log("Search updated");
-    query.value.search = filterData.search;
-    await loadInventories();
-  },
-);
+watch(() => filterData.search, () => {
+  loadInventories();
+});
 </script>
