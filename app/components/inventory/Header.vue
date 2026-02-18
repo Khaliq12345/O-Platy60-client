@@ -1,11 +1,15 @@
 <template>
-  <div>
-    <h1 class="text-xl md:text-3xl font-bold text-gray-900 dark:text-white">
-      Liste des inventaires
-    </h1>
-  </div>
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+        Inventaire
+      </h1>
+      <UButton color="primary" icon="i-lucide-plus" @click="isOpen = true">
+        Ajouter
+      </UButton>
+    </div>
+  <InventoryAdd v-model:open="isOpen" />
 </template>
 
-<script lang="ts" setup></script>
-
-<style></style>
+<script setup>
+const isOpen = ref(false);
+</script>

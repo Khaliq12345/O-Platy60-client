@@ -1,22 +1,15 @@
 <template>
-  <UCollapsible class="flex flex-col gap-2">
-    <UButton
-      class="font-medium"
-      color="neutral"
-      variant="subtle"
-      :trailing-icon="open ? 'i-lucide-minus' : 'i-lucide-plus'"
-      block
-      @click="open = !open"
-    >
+  <UModal v-model:open="isOpen">
+    <template #title>
       Ajouter un élément à l'inventaire
-    </UButton>
+    </template>
 
-    <template #content>
+    <template #body>
       <UForm
-        :schema="schema" 
+        :schema="schema"
         :state="state"
         @submit="onSubmit"
-        class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg border-default"
+        class="space-y-4"
       >
         <UFormField label="Nom du produit" name="name" required>
           <UInput
@@ -26,23 +19,25 @@
           />
         </UFormField>
 
-        <UFormField label="Quantité initiale" name="initial_quantity">
-          <UInputNumber
-            v-model="state.initial_quantity"
-            :min="0"
-            placeholder="0"
-            class="w-full"
-          />
-        </UFormField>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <UFormField label="Quantité initiale" name="initial_quantity">
+            <UInputNumber
+              v-model="state.initial_quantity"
+              :min="0"
+              placeholder="0"
+              class="w-full"
+            />
+          </UFormField>
 
-        <UFormField label="Mesure" name="unit" required>
-          <USelect
-            v-model="state.unit"
-            :items="units"
-            placeholder="Sélectionner une unité"
-            class="w-full"
-          />
-        </UFormField>
+          <UFormField label="Mesure" name="unit" required>
+            <USelect
+              v-model="state.unit"
+              :items="units"
+              placeholder="Sélectionner une unité"
+              class="w-full"
+            />
+          </UFormField>
+        </div>
 
         <UFormField label="Catégorie" name="category" required>
           <USelect
@@ -52,39 +47,57 @@
             class="w-full"
           />
         </UFormField>
-
-        <div class="md:col-span-2 md:px-4 flex justify-center">
-          <UButton type="submit" color="primary" :loading="processing"> Ajouter le produit </UButton>
-        </div>
       </UForm>
     </template>
-  </UCollapsible>
+
+    <template #footer>
+      <div class="w-full flex justify-end gap-3">
+        <UButton
+          color="neutral"
+          variant="soft"
+          label="Annuler"
+          @click="isOpen = false"
+        />
+        <UButton
+          color="primary"
+          :loading="processing"
+          :disabled="processing"
+          label="Ajouter"
+          @click="onSubmit"
+        />
+      </div>
+    </template>
+  </UModal>
 </template>
 
 <script setup lang="ts">
-import { number, z } from "zod";
+import { z } from "zod";
 import type { FormSubmitEvent } from "@nuxt/ui";
 
-// Types
 interface Category {
   id: string;
   name: string;
 }
-const emit = defineEmits<{
-  added: [];
+
+const props = defineProps<{
+  open: boolean;
 }>();
 
-// État réactif
-const open = ref(false);
-const loading = ref(true);
-const categories = ref<{ label: string; value: string }[]>([]);
-const processing = ref(false)
+const emit = defineEmits<{
+  "update:open": [value: boolean];
+}>();
 
-// Composables
+const isOpen = computed({
+  get: () => props.open,
+  set: (val) => emit("update:open", val),
+});
+
+const processing = ref(false);
+const categories = ref<{ label: string; value: string }[]>([]);
+
 const { get, post } = useApi();
 const toast = useToast();
 
-// Schéma de validation Zod
 const schema = z.object({
   name: z
     .string()
@@ -96,7 +109,7 @@ const schema = z.object({
 });
 
 type Schema = z.output<typeof schema>;
-// État du formulaire
+
 const state = reactive<Partial<Schema>>({
   name: "",
   initial_quantity: 0,
@@ -104,7 +117,6 @@ const state = reactive<Partial<Schema>>({
   category: "",
 });
 
-// Données statiques
 const units = [
   { label: "Pièce", value: "pièce" },
   { label: "Kilogramme", value: "kg" },
@@ -114,21 +126,18 @@ const units = [
   { label: "Forfait", value: "forfait" },
 ];
 
-// Soumission du formulaire
-const onSubmit = async (event: FormSubmitEvent<Schema>) => {
+const onSubmit = async () => {
   processing.value = true;
   try {
-    console.log("Produit ajouté:", event.data);
-
-    // Ici vous pouvez faire votre appel API
-    await post("/inventories", { ...event.data, created_at: getDate() });
+    await post("/inventories", { ...state, created_at: new Date().toISOString() });
+    
     toast.add({
       title: "Succès",
       description: "Le produit a été ajouté avec succès.",
       color: "success",
     });
 
-    // Reset du formulaire
+    // Reset form
     Object.assign(state, {
       name: "",
       initial_quantity: 0,
@@ -136,35 +145,34 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       category: "",
     });
 
-    emit("added");
-    open.value = false;
+    isOpen.value = false;
+    
+    // Reload la page après création
+    window.location.reload();
   } catch (error) {
     toast.add({
       title: "Erreur",
       description: "Une erreur est survenue lors de l'ajout du produit.",
       color: "error",
     });
+  } finally {
+    processing.value = false;
   }
-  processing.value = false;
 };
 
-// Chargement des catégories
 onMounted(async () => {
   try {
-    const response = await get<{categories: Category[], count: number}>("/categories");
+    const response = await get<{ categories: Category[]; count: number }>("/categories");
     categories.value = response.categories.map((cat) => ({
       label: cat.name,
       value: cat.id,
     }));
   } catch (err) {
-    console.error("Erreur lors du chargement des catégories:", err);
     toast.add({
       title: "Erreur",
       description: "Impossible de charger les catégories.",
       color: "error",
     });
-  } finally {
-    loading.value = false;
   }
 });
 </script>
