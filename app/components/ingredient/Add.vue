@@ -1,57 +1,43 @@
 <template>
-  <div>
-    <!-- Loading -->
-    <div v-if="loading" class="h-screen flex items-center justify-center">
-      <Loading />
-    </div>
+  <UModal v-model:open="isOpen">
+    <template #title>
+      Nouvel Ingrédient
+    </template>
 
-    <!-- Error -->
-    <div
-      v-else-if="loadError"
-      class="h-screen flex flex-col items-center justify-center px-4"
-    >
-      <UIcon name="i-lucide-alert-circle" class="w-16 h-16 text-red-500 mb-4" />
-      <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-        Erreur de chargement
-      </h2>
-      <p class="text-gray-500 text-center mb-6">
-        Impossible de charger les données nécessaires. Veuillez réessayer.
-      </p>
-      <UButton
-        color="primary"
-        icon="i-lucide-refresh-cw"
-        label="Réessayer"
-        @click="reloadData"
-      />
-    </div>
+    <template #body>
+      <!-- Loading -->
+      <div v-if="loading" class="py-12 flex items-center justify-center">
+        <Loading />
+      </div>
 
-    <!-- Form -->
-    <div v-else class="max-w-2xl mx-auto px-4 py-8">
-      <!-- Lien retour -->
-      <UButton
-        color="neutral"
-        variant="link"
-        icon="i-heroicons-arrow-left"
-        label="Retour"
-        class="mb-4 px-0"
-        @click="onCancel"
-      />
-
-      <!-- Titre -->
-      <h1
-        class="text-xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4"
+      <!-- Error -->
+      <div
+        v-else-if="loadError"
+        class="py-12 flex flex-col items-center justify-center px-4"
       >
-        Nouvel Ingrédient
-      </h1>
+        <UIcon name="i-lucide-alert-circle" class="w-12 h-12 text-red-500 mb-4" />
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          Erreur de chargement
+        </h2>
+        <p class="text-gray-500 text-center mb-4 text-sm">
+          Impossible de charger les données nécessaires.
+        </p>
+        <UButton
+          color="primary"
+          icon="i-lucide-refresh-cw"
+          label="Réessayer"
+          @click="reloadData"
+        />
+      </div>
 
-      <!-- Formulaire avec loading -->
+      <!-- Form -->
       <UForm
+        v-else
         :schema="schema"
         :state="state"
-        class="space-y-6"
+        class="space-y-4"
         @submit="onSubmit"
       >
-        <!-- Nom de l'ingrédient -->
         <UFormField label="Nom" name="name" required>
           <UInput
             v-model="state.name"
@@ -61,7 +47,6 @@
           />
         </UFormField>
 
-        <!-- Catégorie -->
         <UFormField label="Catégorie" name="category">
           <USelect
             v-model="state.category"
@@ -73,7 +58,6 @@
           />
         </UFormField>
 
-        <!-- Unité de mesure -->
         <UFormField label="Unité de mesure" name="unit" required>
           <USelect
             v-model="state.unit"
@@ -84,7 +68,6 @@
           />
         </UFormField>
 
-        <!-- Quantité totale -->
         <UFormField label="Quantité totale" name="total_quantity" required>
           <UInputNumber
             v-model="state.total_quantity"
@@ -93,46 +76,56 @@
             :disabled="isSubmitting"
           />
         </UFormField>
-
-        <!-- Boutons -->
-        <div class="flex justify-end gap-3 pt-4">
-          <UButton
-            type="button"
-            color="neutral"
-            variant="soft"
-            label="Annuler"
-            :disabled="isSubmitting"
-            @click="onCancel"
-          />
-          <UButton
-            type="submit"
-            color="primary"
-            :loading="isSubmitting"
-            :disabled="isSubmitting"
-            :label="isSubmitting ? 'Enregistrement...' : 'Enregistrer'"
-          />
-        </div>
       </UForm>
-    </div>
-  </div>
+    </template>
+
+    <template #footer>
+      <div class="w-full flex justify-end gap-3">
+        <UButton
+          color="neutral"
+          variant="soft"
+          label="Annuler"
+          :disabled="isSubmitting"
+          @click="isOpen = false"
+        />
+        <UButton
+          color="primary"
+          :loading="isSubmitting"
+          :disabled="isSubmitting || loading || loadError"
+          :label="isSubmitting ? 'Enregistrement...' : 'Enregistrer'"
+          @click="onSubmit"
+        />
+      </div>
+    </template>
+  </UModal>
 </template>
 
 <script setup lang="ts">
 import { z } from "zod";
-import type { FormSubmitEvent } from "@nuxt/ui";
 import type { Category } from "~/types/category";
 import { Mesurement, type IngredientCreate } from "~/types/ingredient";
 
-const router = useRouter();
+const props = defineProps<{
+  open: boolean;
+}>();
+
+const emit = defineEmits<{
+  "update:open": [value: boolean];
+}>();
+
 const { get, post } = useApi();
 const toast = useToast();
+
+const isOpen = computed({
+  get: () => props.open,
+  set: (val) => emit("update:open", val),
+});
 
 const loading = ref(true);
 const loadError = ref(false);
 const isSubmitting = ref(false);
 const loadingCategories = ref(false);
 
-// Items pour le select des unités de mesure
 const measurementItems = [
   { label: "Kilogramme (kg)", value: Mesurement.KG },
   { label: "Gramme (g)", value: Mesurement.G },
@@ -142,7 +135,6 @@ const measurementItems = [
   { label: "Cuillère à soupe (tbsp)", value: Mesurement.TBSP },
 ];
 
-// Schéma Zod de validation
 const schema = z.object({
   name: z.string().min(1, "Le nom est requis"),
   unit: z.enum(Mesurement, {
@@ -154,7 +146,6 @@ const schema = z.object({
 
 type Schema = z.output<typeof schema>;
 
-// État du formulaire
 const state = reactive<Partial<Schema>>({
   name: "",
   unit: undefined,
@@ -162,7 +153,6 @@ const state = reactive<Partial<Schema>>({
   total_quantity: 0,
 });
 
-// Catégories pour le select
 const categories = ref<Category[]>([]);
 const categoryItems = computed(() => {
   return categories.value.map((cat) => ({
@@ -171,7 +161,6 @@ const categoryItems = computed(() => {
   }));
 });
 
-// Charger les catégories
 async function loadCategories() {
   loadingCategories.value = true;
   try {
@@ -180,7 +169,6 @@ async function loadCategories() {
     );
     categories.value = response?.categories ?? [];
   } catch (err) {
-    console.error("Erreur lors du chargement des catégories:", err);
     toast.add({
       title: "Erreur",
       description: "Impossible de charger les catégories.",
@@ -191,15 +179,12 @@ async function loadCategories() {
   }
 }
 
-// Initialisation
 async function loadData() {
   loading.value = true;
   loadError.value = false;
-
   try {
     await loadCategories();
   } catch (err) {
-    console.error("Erreur lors du chargement:", err);
     loadError.value = true;
     toast.add({
       title: "Erreur",
@@ -215,16 +200,14 @@ function reloadData() {
   loadData();
 }
 
-// Soumission du formulaire
-async function onSubmit(event: FormSubmitEvent<Schema>) {
+async function onSubmit() {
   isSubmitting.value = true;
-
   try {
     const ingredientData: IngredientCreate = {
-      name: event.data.name,
-      unit: event.data.unit,
-      category: event.data.category,
-      total_quantity: event.data.total_quantity,
+      name: state.name!,
+      unit: state.unit!,
+      category: state.category,
+      total_quantity: state.total_quantity!,
     };
 
     await post("/ingredients", ingredientData);
@@ -235,7 +218,14 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       color: "success",
     });
 
-    router.push("/ingredients");
+    // Reset form
+    state.name = "";
+    state.unit = undefined;
+    state.category = undefined;
+    state.total_quantity = 0;
+
+    isOpen.value = false;
+    window.location.reload();
   } catch (error) {
     toast.add({
       title: "Erreur",
@@ -247,12 +237,10 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   }
 }
 
-// Annuler et retour
-function onCancel() {
-  router.push("/ingredients");
-}
-
-onMounted(() => {
-  loadData();
+// Load data when modal opens
+watch(() => props.open, (newOpen) => {
+  if (newOpen) {
+    loadData();
+  }
 });
 </script>

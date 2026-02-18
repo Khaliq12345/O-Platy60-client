@@ -1,4 +1,4 @@
- <template>
+<template>
   <div class="flex justify-between items-center mb-6">
     <h1 class="text-xl md:text-3xl font-bold text-gray-900 dark:text-white">
       Liste des ingrédients
@@ -7,9 +7,16 @@
       color="primary"
       label="Nouvel ingrédient"
       icon="i-heroicons-plus"
-      to="/ingredients/add"
+      @click="isOpen = true"
     />
   </div>
+
+  <IngredientAdd
+    :open="isOpen"
+    @update:open="isOpen = $event"
+  />
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+const isOpen = ref(false);
+</script>

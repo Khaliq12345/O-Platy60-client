@@ -7,9 +7,16 @@
       color="primary"
       label="Nouvel Achat"
       icon="i-heroicons-plus"
-      to="/purchases/add"
+      @click="isOpen = true"
     />
   </div>
+
+  <PurchaseAdd
+    :open="isOpen"
+    @update:open="isOpen = $event"
+  />
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+const isOpen = ref(false);
+</script>
