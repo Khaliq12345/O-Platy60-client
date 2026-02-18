@@ -51,7 +51,7 @@
     </template>
 
     <template #footer>
-      <div class="flex justify-end gap-3">
+      <div class="w-full flex justify-end gap-3">
         <UButton
           color="neutral"
           variant="soft"

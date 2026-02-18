@@ -2,7 +2,7 @@
   <UCollapsible v-model:open="isOpen">
     <template #content>
       <div
-        class="px-4 pb-4 pt-2 bg-gray-50/50 dark:bg-gray-800/30 border-t border-gray-100 dark:border-gray-800"
+        class="px-2 pb-2 pt-2 rounded-md bg-gray-50/50 dark:bg-gray-800/30"
       >
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div
@@ -28,7 +28,7 @@
             </div>
           </div>
 
-          <div class="w-full col-span-full flex justify-center">
+          <div class="mb-2 w-full col-span-full flex justify-center">
             <UButton
               label="Calculer le sommaire"
               :loading="loading"
