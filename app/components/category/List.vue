@@ -1,8 +1,8 @@
 <template>
   <div class="p-1 flex flex-col justify-between h-full min-w-[60%] mx-auto">
     <div class="mb-2 space-y-4">
-      <CategoryListHeader :categories-count="query.total" />
 
+      <PageHeader title="Catégories" />
       <CategoryAdd @added="loadCategories" />
 
       <div class="md:px-4 flex items-center gap-2 mb-2">

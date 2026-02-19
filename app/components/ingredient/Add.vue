@@ -1,109 +1,23 @@
 <template>
-  <UModal v-model:open="isOpen">
-    <template #title>
-      Nouvel Ingrédient
-    </template>
-
-    <template #body>
-      <!-- Loading -->
-      <div v-if="loading" class="py-12 flex items-center justify-center">
-        <Loading />
-      </div>
-
-      <!-- Error -->
-      <div
-        v-else-if="loadError"
-        class="py-12 flex flex-col items-center justify-center px-4"
-      >
-        <UIcon name="i-lucide-alert-circle" class="w-12 h-12 text-red-500 mb-4" />
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-          Erreur de chargement
-        </h2>
-        <p class="text-gray-500 text-center mb-4 text-sm">
-          Impossible de charger les données nécessaires.
-        </p>
-        <UButton
-          color="primary"
-          icon="i-lucide-refresh-cw"
-          label="Réessayer"
-          @click="reloadData"
-        />
-      </div>
-
-      <!-- Form -->
-      <UForm
-        v-else
-        :schema="schema"
-        :state="state"
-        class="space-y-4"
-        @submit="onSubmit"
-      >
-        <UFormField label="Nom" name="name" required>
-          <UInput
-            v-model="state.name"
-            placeholder="ex: Farine de blé"
-            class="w-full"
-            :disabled="isSubmitting"
-          />
-        </UFormField>
-
-        <UFormField label="Catégorie" name="category">
-          <USelect
-            v-model="state.category"
-            :items="categoryItems"
-            placeholder="Sélectionner une catégorie (optionnel)"
-            class="w-full"
-            :disabled="isSubmitting || loadingCategories"
-            :loading="loadingCategories"
-          />
-        </UFormField>
-
-        <UFormField label="Unité de mesure" name="unit" required>
-          <USelect
-            v-model="state.unit"
-            :items="measurementItems"
-            placeholder="Sélectionner une unité"
-            class="w-full"
-            :disabled="isSubmitting"
-          />
-        </UFormField>
-
-        <UFormField label="Quantité totale" name="total_quantity" required>
-          <UInputNumber
-            v-model="state.total_quantity"
-            placeholder="ex: 5000"
-            class="w-full"
-            :disabled="isSubmitting"
-          />
-        </UFormField>
-      </UForm>
-    </template>
-
-    <template #footer>
-      <div class="w-full flex justify-end gap-3">
-        <UButton
-          color="neutral"
-          variant="soft"
-          label="Annuler"
-          :disabled="isSubmitting"
-          @click="isOpen = false"
-        />
-        <UButton
-          color="primary"
-          :loading="isSubmitting"
-          :disabled="isSubmitting || loading || loadError"
-          :label="isSubmitting ? 'Enregistrement...' : 'Enregistrer'"
-          @click="onSubmit"
-        />
-      </div>
-    </template>
-  </UModal>
+  <ModalForm
+    v-model:open="isOpen"
+    title="Nouvel Ingrédient"
+    :fields="fields"
+    :schema="schema"
+    :loading="loading"
+    :load-error="loadError"
+    submit-label="Enregistrer"
+    @submit="onSubmit"
+    @reload="loadData"
+  />
 </template>
 
 <script setup lang="ts">
 import { z } from "zod";
+import { Measurement, measurementOptions } from "~/utils/measurements";
+import { loadCategories } from "~/utils/categories";
 import type { Category } from "~/types/category";
-import { Mesurement, type IngredientCreate } from "~/types/ingredient";
+import type { IngredientCreate } from "~/types/ingredient";
 
 const props = defineProps<{
   open: boolean;
@@ -113,101 +27,88 @@ const emit = defineEmits<{
   "update:open": [value: boolean];
 }>();
 
-const { get, post } = useApi();
+const { post } = useApi();
 const toast = useToast();
 
+// Sync open
 const isOpen = computed({
   get: () => props.open,
   set: (val) => emit("update:open", val),
 });
 
+// État chargement
 const loading = ref(true);
 const loadError = ref(false);
-const isSubmitting = ref(false);
-const loadingCategories = ref(false);
 
-const measurementItems = [
-  { label: "Kilogramme (kg)", value: Mesurement.KG },
-  { label: "Gramme (g)", value: Mesurement.G },
-  { label: "Litre (L)", value: Mesurement.L },
-  { label: "Unité", value: Mesurement.UNIT },
-  { label: "Cuillère à café (tsp)", value: Mesurement.TSP },
-  { label: "Cuillère à soupe (tbsp)", value: Mesurement.TBSP },
-];
-
-const schema = z.object({
-  name: z.string().min(1, "Le nom est requis"),
-  unit: z.enum(Mesurement, {
-    errorMap: () => ({ message: "Veuillez sélectionner une unité de mesure" }),
-  }),
-  category: z.string().optional(),
-  total_quantity: z.number().min(1, "La quantité totale est requise"),
-});
-
-type Schema = z.output<typeof schema>;
-
-const state = reactive<Partial<Schema>>({
-  name: "",
-  unit: undefined,
-  category: undefined,
-  total_quantity: 0,
-});
-
+// Données
 const categories = ref<Category[]>([]);
-const categoryItems = computed(() => {
-  return categories.value.map((cat) => ({
-    label: cat.name,
-    value: cat.id,
-  }));
-});
 
-async function loadCategories() {
-  loadingCategories.value = true;
-  try {
-    const response = await get<{ categories: Category[]; count: number }>(
-      "/categories"
-    );
-    categories.value = response?.categories ?? [];
-  } catch (err) {
-    toast.add({
-      title: "Erreur",
-      description: "Impossible de charger les catégories.",
-      color: "error",
-    });
-  } finally {
-    loadingCategories.value = false;
-  }
-}
-
+// Chargement des données
 async function loadData() {
   loading.value = true;
   loadError.value = false;
   try {
-    await loadCategories();
+    categories.value = await loadCategories(toast);
   } catch (err) {
     loadError.value = true;
-    toast.add({
-      title: "Erreur",
-      description: "Impossible de charger les données.",
-      color: "error",
-    });
   } finally {
     loading.value = false;
   }
 }
 
-function reloadData() {
-  loadData();
-}
+// Configuration des champs
+const fields = computed(() => [
+  {
+    name: "name",
+    label: "Nom",
+    type: "text" as const,
+    required: true,
+    placeholder: "ex: Farine de blé",
+  },
+  {
+    name: "category",
+    label: "Catégorie",
+    type: "select" as const,
+    placeholder: "Sélectionner une catégorie (optionnel)",
+    options: categories.value.map((cat) => ({
+      label: cat.name,
+      value: cat.id,
+    })),
+    loading: loading.value,
+  },
+  {
+    name: "unit",
+    label: "Unité de mesure",
+    type: "select" as const,
+    required: true,
+    placeholder: "Sélectionner une unité",
+    options: measurementOptions,
+  },
+  {
+    name: "total_quantity",
+    label: "Quantité totale",
+    type: "number" as const,
+    required: true,
+    placeholder: "ex: 5000",
+  },
+]);
 
-async function onSubmit() {
-  isSubmitting.value = true;
+// Schema Zod
+const schema = z.object({
+  name: z.string().min(1, "Le nom est requis"),
+  unit: z.enum(Measurement),
+  category: z.string().optional(),
+  total_quantity: z.number().min(1, "La quantité totale est requise"),
+});
+
+// Soumission
+async function onSubmit(data: any) {
   try {
     const ingredientData: IngredientCreate = {
-      name: state.name!,
-      unit: state.unit!,
-      category: state.category,
-      total_quantity: state.total_quantity!,
+      name: data.name,
+      unit: data.unit.toLowerCase(),
+      category: data.category,
+      total_quantity: data.total_quantity,
     };
 
     await post("/ingredients", ingredientData);
@@ -218,12 +119,6 @@ async function onSubmit() {
       color: "success",
     });
 
-    // Reset form
-    state.name = "";
-    state.unit = undefined;
-    state.category = undefined;
-    state.total_quantity = 0;
-
     isOpen.value = false;
     window.location.reload();
   } catch (error) {
@@ -232,12 +127,10 @@ async function onSubmit() {
       description: "Une erreur est survenue lors de la création.",
       color: "error",
     });
-  } finally {
-    isSubmitting.value = false;
   }
 }
 
-// Load data when modal opens
+// Chargement à l'ouverture
 watch(() => props.open, (newOpen) => {
   if (newOpen) {
     loadData();

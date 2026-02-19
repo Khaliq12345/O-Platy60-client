@@ -1,11 +1,16 @@
 <template>
   <div class="p-1 flex flex-col justify-between h-full lg:mx-auto">
+    <!-- En-tête -->
     <div class="mb-2">
-      <IngredientListHeader />
+      <PageHeader 
+        title="Ingrédients" 
+        :show-add="true" 
+        @add="showAddModal = true" 
+      />
       <IngredientListFilters
+        v-model:query="filterQuery"
         @filter="handleFilter"
         @export="handleExport"
-        v-model:query="filterQuery"
       />
     </div>
 
@@ -23,15 +28,14 @@
       :page="query.page"
       :limit="query.limit"
       :total="query.total"
-      @change-page="(val: number) => {
-        query.page = val;
-        loadIngredients();
-      }"
-      @change-limit="(val: { limit: number; page: number }) => {
-        query.limit = val.limit;
-        query.page = val.page;
-        loadIngredients();
-      }"
+      @change-page="handlePageChange"
+      @change-limit="handleLimitChange"
+    />
+
+    <!-- Modale d'ajout -->
+    <IngredientAdd
+      :open="showAddModal"
+      @update:open="showAddModal = $event"
     />
   </div>
 </template>
@@ -40,29 +44,37 @@
 import type { Category } from "~/types/category";
 import type { Ingredient } from "~/types/ingredient";
 
+// Routing & API
 const route = useRoute();
 const router = useRouter();
 const { get, del } = useApi();
 const toast = useToast();
 
+// Données principales
 const ingredients = ref<Ingredient[]>([]);
 const categories = ref<Category[]>([]);
 
-provide("categories", categories);
-
+// État UI
 const loading = ref(true);
+const showAddModal = ref(false);
 
+// Filtres de pagination
 const query = ref({
   page: Number(route.query.page) || 1,
   limit: Number(route.query.limit) || 20,
   total: 0,
 });
 
+// Filtres dynamiques
 const filterQuery = ref({
   search: route.query.search as string | undefined,
   category_id: route.query.category_id as string | undefined,
 });
 
+// Partage des catégories aux composants enfants
+provide("categories", categories);
+
+// Chargement des catégories
 async function loadCategories() {
   try {
     const res = await get<{ categories: Category[]; count: number }>(
@@ -78,6 +90,7 @@ async function loadCategories() {
   }
 }
 
+// Chargement des ingrédients
 async function loadIngredients() {
   loading.value = true;
   try {
@@ -103,6 +116,7 @@ async function loadIngredients() {
   }
 }
 
+// Mise à jour des filtres et reload
 function handleFilter() {
   query.value.page = 1;
   const mergedQuery = {
@@ -114,14 +128,25 @@ function handleFilter() {
   loadIngredients();
 }
 
+// Changement de page
+function handlePageChange(newPage: number) {
+  query.value.page = newPage;
+  loadIngredients();
+}
+
+// Changement de limite par page
+function handleLimitChange(params: { limit: number; page: number }) {
+  query.value.limit = params.limit;
+  query.value.page = params.page;
+  loadIngredients();
+}
+
+// Export CSV
 function handleExport() {
   console.log("Export CSV");
 }
 
-function onEdit(item: Ingredient) {
-  router.push(`/ingredients/${item.id}/edit`);
-}
-
+// Suppression d'un ingrédient
 async function onDelete(item: Ingredient) {
   if (!confirm(`Supprimer "${item.name}" ?`)) return;
 
@@ -142,6 +167,7 @@ async function onDelete(item: Ingredient) {
   }
 }
 
+// Init
 onMounted(() => {
   loadCategories();
   loadIngredients();
