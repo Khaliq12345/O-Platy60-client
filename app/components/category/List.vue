@@ -1,5 +1,5 @@
 <template>
-  <div class="p-1 flex flex-col justify-between h-full md:min-w-lg md:mx-auto">
+  <div class="p-1 flex flex-col justify-between h-full min-w-[60%] mx-auto">
     <div class="mb-2 space-y-4">
       <CategoryListHeader :categories-count="query.total" />
 

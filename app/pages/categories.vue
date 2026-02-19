@@ -5,6 +5,9 @@
     </template>
 
     <template #body>
+      <div class="mx-auto w-[60%]">
+        <BackButton />
+      </div>
       <CategoryList />
     </template>
   </UDashboardPanel>

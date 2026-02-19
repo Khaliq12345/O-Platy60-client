@@ -1,5 +1,4 @@
 <template>
-  <BackButton class="mb-2" />
   <div
     class="px-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6"
   >

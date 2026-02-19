@@ -10,7 +10,7 @@
 
         <div class="grid gap-2 items-center grid-cols-1 md:grid-cols-3">
           <InventoryWeekSelector />
-          <InventoryFilters class="md:col-span-2"/>
+          <InventoryFilters class="md:col-span-2" />
         </div>
 
         <Loading v-if="loading" />
@@ -39,10 +39,20 @@ import type {
 
 const { get } = useApi();
 
+// reactive variables
 const loading = ref(true);
 const inventoryItems = ref<Inventory[]>([]);
 const transactions = ref<Record<string, DailyTransactionSummary[]>>({});
 const currentWeekStart = ref(startOfWeek(new Date(), { weekStartsOn: 1 }));
+const filterData = reactive({
+  search: "",
+  start_date: "",
+  end_date: "",
+});
+
+// Provide values to the children
+provide("weekStart", currentWeekStart);
+provide("filterInfo", filterData);
 
 const weekDays = computed((): DayData[] => {
   return Array.from({ length: 7 }, (_, i) => {
@@ -54,12 +64,6 @@ const weekDays = computed((): DayData[] => {
     };
   });
 });
-
-provide("weekStart", currentWeekStart);
-
-watch(currentWeekStart, () => {
-  loadInventories();
-}, { immediate: true });
 
 async function loadInventories() {
   loading.value = true;
@@ -73,7 +77,8 @@ async function loadInventories() {
     inventoryItems.value = response?.inventories ?? [];
 
     for (const item of inventoryItems.value) {
-      transactions.value[item.inventory_id] = item.daily_transaction_summary ?? [];
+      transactions.value[item.inventory_id] =
+        item.daily_transaction_summary ?? [];
     }
   } catch (error) {
     inventoryItems.value = [];
@@ -82,15 +87,19 @@ async function loadInventories() {
   }
 }
 
-const filterData = reactive({
-  search: "",
-  start_date: "",
-  end_date: "",
-});
-
-provide("filterInfo", filterData);
-
-watch(() => filterData.search, () => {
-  loadInventories();
-});
+// Watch and react when currentWeekStart changes
+watch(
+  currentWeekStart,
+  () => {
+    loadInventories();
+  },
+  { immediate: true },
+);
+// Watch when the filterData changes
+watch(
+  () => filterData.search,
+  () => {
+    loadInventories();
+  },
+);
 </script>

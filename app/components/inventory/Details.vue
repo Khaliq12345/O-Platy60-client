@@ -1,10 +1,10 @@
 <template>
+  <!-- COmponent to calculate summary -->
   <UCollapsible v-model:open="isOpen">
     <template #content>
-      <div
-        class="px-2 pb-2 pt-2 rounded-md bg-gray-50/50 dark:bg-gray-800/30"
-      >
+      <div class="px-2 pb-2 pt-2 rounded-md bg-gray-50/50 dark:bg-gray-800/30">
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- Metrics weekly  -->
           <div
             v-for="(stat, index) in stats"
             :key="index"
@@ -14,6 +14,7 @@
               {{ stat.label }}
             </p>
 
+            <!-- Input manuel du stock/portion -->
             <UInputNumber
               v-if="stat.isInput"
               v-model="manualQty"
@@ -23,11 +24,13 @@
               color="primary"
             />
 
+            <!-- Only show if not input -->
             <div v-else class="text-2xl font-semibold" :class="stat.color">
               {{ stat.displayValue }}
             </div>
           </div>
 
+          <!-- Action to start the weekly summary calculations -->
           <div class="mb-2 w-full col-span-full flex justify-center">
             <UButton
               label="Calculer le sommaire"
@@ -55,10 +58,12 @@ const props = defineProps<{
 const { post } = useApi();
 const toast = useToast();
 
+// Defining the reactive variables
 const loading = ref(false);
 const manualQty = ref<number | null>(null);
 const summary = ref<InventoryWeeklySummary | null>(null);
 
+// Defining the computed
 const stats = computed(() => [
   {
     label: "Total ventes",
@@ -84,6 +89,7 @@ const stats = computed(() => [
   },
 ]);
 
+// All functions
 async function calculateSummary() {
   if (!manualQty.value) {
     toast.add({

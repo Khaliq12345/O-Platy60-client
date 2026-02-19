@@ -5,21 +5,24 @@
     </template>
 
     <template #body>
-      <Loading v-if="loading" />
-      <div v-else-if="purchase" class="w-full md:p-6 p-2 overflow-scroll">
-        <PurchaseDetailHeader
-          :item-name="purchase?.item_name || ''"
-          :purchase-id="purchaseId || ''"
-        ></PurchaseDetailHeader>
+      <div class="flex justify-center">
+        <Loading v-if="loading" />
+        <div v-else-if="purchase" class="w-[60%] md:p-6 p-2">
+          <BackButton class="mb-2" />
+          <PurchaseDetailHeader
+            :item-name="purchase?.item_name || ''"
+            :purchase-id="purchaseId || ''"
+          ></PurchaseDetailHeader>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
-          <PurchaseDetailInfo :purchase="purchase" />
+          <div class="grid grid-cols-1 gap-4 w-full">
+            <PurchaseDetailInfo :purchase="purchase" />
 
-          <PurchaseDetailTransformation :purchase="purchase" />
+            <PurchaseDetailTransformation :purchase="purchase" />
+          </div>
         </div>
-      </div>
-      <div v-else class="py-6">
-        <UEmpty icon="i-lucide-circle-minus" title="Achats non trouvee" />
+        <div v-else class="py-6">
+          <UEmpty icon="i-lucide-circle-minus" title="Achats non trouvee" />
+        </div>
       </div>
     </template>
   </UDashboardPanel>

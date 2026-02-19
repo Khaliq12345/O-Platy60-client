@@ -1,8 +1,8 @@
 <template>
-  <div class="flex items-center x-4 py-2">
-    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-xl md:text-3xl font-bold text-gray-900 dark:text-white">
       Liste des catégories
-    </h2>
+    </h1>
   </div>
 </template>
 
