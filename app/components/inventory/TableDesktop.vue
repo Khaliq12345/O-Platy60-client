@@ -109,7 +109,7 @@ const props = defineProps<{
   days: string[];
 }>();
 
-const { post } = useApi();
+const { put } = useApi();
 const toast = useToast();
 
 const productsRef = computed(() => props.products);
@@ -126,6 +126,6 @@ const {
 });
 
 function handleUpdateSale(productName: string, dayIndex: number) {
-  updateSale(productName, dayIndex, post, toast);
+  updateSale(productName, dayIndex, put, toast);
 }
 </script>

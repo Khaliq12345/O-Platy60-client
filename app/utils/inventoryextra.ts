@@ -4,6 +4,7 @@ import type { Ref } from "vue";
 
 // Nouveau type pour les données du backend
 export interface ProductDaySummary {
+  product_id: string; // Ajouté - nécessaire pour l'API
   product_name: string;
   day: string; // YYYY-MM-DD
   initial_portion: number;
@@ -76,6 +77,7 @@ export function useInventoryLogic(options: UseInventoryOptions): UseInventoryRet
     
     // Somme si plusieurs entrées pour le même jour
     return {
+      product_id: dayEntries[0].product_id, // Prend le premier
       product_name: productName,
       day: date,
       initial_portion: dayEntries[0].initial_portion, // Prend le premier
@@ -97,15 +99,24 @@ export function useInventoryLogic(options: UseInventoryOptions): UseInventoryRet
     openSummaries.value[productName] = !openSummaries.value[productName];
   }
 
-  async function updateSale(productName: string, dayIndex: number, post: Function, toast: any) {
+  async function updateSale(productName: string, dayIndex: number, put: Function, toast: any) {
     const day = days.value[dayIndex];
+    const dayData = getDayData(productName, day);
+    
+    // Vérifie qu'on a les données nécessaires
+    if (!dayData) {
+      toast.add({ title: "Erreur", description: "Données du jour non trouvées", color: "error" });
+      return;
+    }
+
     try {
-      await post("/products/transaction", {
-        product_name: productName,
-        sale: saleInputs.value[productName][dayIndex] ?? 0,
-        day: day,
+      // Endpoint corrigé + product_id ajouté
+      await put("/products/transaction/add", {
+        product_id: dayData.product_id,
+        sales: saleInputs.value[productName][dayIndex] ?? 0,
       });
       toast.add({ title: "Succès", description: "Vente enregistrée", color: "success" });
+      window.location.reload();
     } catch {
       toast.add({ title: "Erreur", description: "Impossible d'enregistrer", color: "error" });
     }
