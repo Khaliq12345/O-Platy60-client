@@ -1,14 +1,14 @@
 <template>
   <div>
-    <!-- Desktop -->
+    <!-- Desktop view -->
     <InventoryTableDesktop
       class="hidden md:block"
       :items="items"
       :days="days"
       :transactions="transactions"
     />
-    
-    <!-- Mobile -->
+
+    <!-- Mobile view -->
     <InventoryTableMobile
       class="md:hidden"
       :items="items"

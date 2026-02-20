@@ -38,9 +38,17 @@
 
           <template #description>
             <div class="space-y-3">
-              <!-- Initial -->
+              <!-- Stock Initial -->
               <div class="flex items-center justify-between">
-                <span class="text-xs text-gray-400 uppercase">Initial</span>
+                <span class="text-xs text-gray-400 uppercase">Stock Initial</span>
+                <span class="text-lg font-medium text-gray-900 dark:text-white">
+                  {{ getInitialQuantity(item.inventory_id, day.date, idx) }}
+                </span>
+              </div>
+
+              <!-- Entrées -->
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-gray-400 uppercase">Entrées</span>
                 <span class="text-lg font-medium text-gray-900 dark:text-white">
                   {{ getEntry(item.inventory_id, day.date) }}
                 </span>
@@ -60,11 +68,19 @@
                 />
               </div>
 
-              <!-- Stock final -->
+              <!-- Stock Final -->
               <div class="flex items-center justify-between">
-                <span class="text-xs text-gray-400 uppercase">Stock final</span>
-                <span class="text-lg font-medium text-gray-900 dark:text-white">
-                  {{ calculateStock(item.inventory_id, day.date, idx) }}
+                <span class="text-xs text-blue-400 uppercase">Stock Final</span>
+                <span class="text-lg font-medium text-blue-600 dark:text-blue-400">
+                  {{ calculateFinalStock(item.inventory_id, day.date, idx) }}
+                </span>
+              </div>
+
+              <!-- Restant -->
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-green-400 uppercase">Restant</span>
+                <span class="text-lg font-medium text-green-600 dark:text-green-400">
+                  {{ calculateRemaining(item.inventory_id, day.date, idx) }}
                 </span>
               </div>
             </div>
@@ -98,9 +114,18 @@
 </template>
 
 <script setup lang="ts">
-import { format, parseISO } from "date-fns";
-import { fr } from "date-fns/locale";
 import type { Inventory, DayData, DailyTransactionSummary } from "~/types/inventory";
+import {
+  formatInventoryDay,
+  getEntryQuantity,
+  syncSaleInputsForItems,
+  getInitialQuantityForDay,
+  calculateFinalStockForDay,
+  calculateRemainingForDay,
+  getCurrentStockForToday,
+  toggleSummaryState,
+  saveInventorySale,
+} from "~/utils/inventoryextra";
 
 const props = defineProps<{
   items: Inventory[];
@@ -114,66 +139,64 @@ const toast = useToast();
 const saleInputs = ref<Record<string, number[]>>({});
 const openSummaries = ref<Record<string, boolean>>({});
 
+// Init sale inputs from transactions
 watch(() => props.items, (newItems) => {
-  newItems.forEach((item) => {
-    if (!saleInputs.value[item.inventory_id]) {
-      saleInputs.value[item.inventory_id] = props.days.map((day) => {
-        const tx = props.transactions[item.inventory_id]?.find(
-          (t) => t.summary_date === day.date
-        );
-        return tx?.total_sales ?? 0;
-      });
-    }
-  });
+  syncSaleInputsForItems(newItems, props.days, props.transactions, saleInputs);
 }, { immediate: true });
 
 function formatDayFull(dateStr: string): string {
-  const date = parseISO(dateStr);
-  return format(date, "EEE, MMM dd", { locale: fr }).toUpperCase();
+  return formatInventoryDay(dateStr, "EEE, MMM dd");
 }
 
 function getEntry(inventoryId: string, date: string): number {
-  const tx = props.transactions[inventoryId]?.find((t) => t.summary_date === date);
-  return tx?.total_quantity ?? 0;
+  return getEntryQuantity(props.transactions, inventoryId, date);
 }
 
-function calculateStock(inventoryId: string, date: string, dayIndex: number): number {
-  const entry = getEntry(inventoryId, date);
-  const sale = saleInputs.value[inventoryId]?.[dayIndex] ?? 0;
-  return Math.max(0, entry - sale);
+// Get initial quantity for the day
+function getInitialQuantity(inventoryId: string, _date: string, dayIndex: number): number {
+  return getInitialQuantityForDay(inventoryId, dayIndex, {
+    items: props.items,
+    days: props.days,
+    transactions: props.transactions,
+    saleInputs: saleInputs.value,
+  });
+}
+
+// Calculate final stock (initial + entries - sales)
+function calculateFinalStock(inventoryId: string, date: string, dayIndex: number): number {
+  return calculateFinalStockForDay(inventoryId, date, dayIndex, {
+    items: props.items,
+    days: props.days,
+    transactions: props.transactions,
+    saleInputs: saleInputs.value,
+  });
+}
+
+// Calculate remaining quantity
+function calculateRemaining(inventoryId: string, date: string, dayIndex: number): number {
+  return calculateRemainingForDay(inventoryId, date, dayIndex, {
+    items: props.items,
+    days: props.days,
+    transactions: props.transactions,
+    saleInputs: saleInputs.value,
+  });
 }
 
 function getCurrentStock(item: Inventory): number {
-  const today = new Date().toISOString().split('T')[0];
-  const todayTx = props.transactions[item.inventory_id]?.find(
-    (t) => t.summary_date === today
-  );
-  return todayTx?.total_quantity ?? item.initial_quantity ?? 0;
+  return getCurrentStockForToday(item, props.transactions);
 }
 
 function toggleSummary(inventoryId: string) {
-  openSummaries.value[inventoryId] = !openSummaries.value[inventoryId];
+  toggleSummaryState(openSummaries, inventoryId);
 }
 
 async function updateSale(item: Inventory, day: DayData, index: number) {
-  try {
-    await post(`/inventories/transactions`, {
-      inventory_id: item.inventory_id,
-      sale: saleInputs.value[item.inventory_id][index] ?? 0,
-      created_at: day.date,
-    });
-
-    toast.add({
-      title: "Succès",
-      description: "Vente enregistrée",
-      color: "success",
-    });
-  } catch (error) {
-    toast.add({
-      title: "Erreur",
-      description: "Impossible d'enregistrer la vente",
-      color: "error",
-    });
-  }
+  await saveInventorySale({
+    post,
+    toast,
+    inventoryId: item.inventory_id,
+    sale: saleInputs.value[item.inventory_id][index] ?? 0,
+    createdAt: day.date,
+  });
 }
 </script>

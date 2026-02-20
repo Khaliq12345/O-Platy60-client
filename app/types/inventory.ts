@@ -1,4 +1,4 @@
-// Résumé quotidien
+// Daily transaction summary from API
 export interface DailyTransactionSummary {
   created_at: string;    // ISO 8601 timestamp
   total_sales: number;
@@ -6,7 +6,8 @@ export interface DailyTransactionSummary {
   inventory_id: string;  // UUID
   summary_date: string;  // ISO 8601 date (YYYY-MM-DD)
 }
-// Transaction
+
+// Base transaction fields
 export interface InventoryTransactionBase {
   inventory_id: string;
   sale: number;
@@ -22,8 +23,7 @@ export interface InventoryTransaction extends InventoryTransactionBase {
   created_at: string;
 }
 
-// Inventory
-//
+// Base inventory fields
 export interface InventoryBase {
   name: string;
   initial_quantity: number;
@@ -40,18 +40,20 @@ export interface InventoryUpdate {
   category?: string;
 }
 
+// Full inventory with transactions
 export interface Inventory extends InventoryBase {
   inventory_id: string;
   created_at: string;
   daily_transaction_summary: DailyTransactionSummary[];
 }
 
-// Réponse du serveur
+// API response wrapper
 export interface InventoriesResponse {
   inventories: Inventory[];
   count: number;
 }
-// Résumé hebdomadaire
+
+// Weekly summary data
 export interface WeeklyInventorySummary {
   id: number;
   start_date: string;
@@ -63,7 +65,7 @@ export interface WeeklyInventorySummary {
   inventory_id: string;
 }
 
-// Données pour une journée
+// Single day data structure
 export interface DayData {
   date: string;
   entry: number;
@@ -71,7 +73,7 @@ export interface DayData {
   transactionId?: number;
 }
 
-// Résumé d'inventaire hebdomadaire
+// Weekly summary calculations
 export interface InventoryWeeklySummary {
   final_quantity: number;
   total_sales: number;

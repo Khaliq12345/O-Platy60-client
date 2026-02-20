@@ -39,7 +39,7 @@ import type {
 
 const { get } = useApi();
 
-// reactive variables
+// Reactive state
 const loading = ref(true);
 const inventoryItems = ref<Inventory[]>([]);
 const transactions = ref<Record<string, DailyTransactionSummary[]>>({});
@@ -50,10 +50,11 @@ const filterData = reactive({
   end_date: "",
 });
 
-// Provide values to the children
+// Provide to child components
 provide("weekStart", currentWeekStart);
 provide("filterInfo", filterData);
 
+// Generate 7 days from week start
 const weekDays = computed((): DayData[] => {
   return Array.from({ length: 7 }, (_, i) => {
     const date = addDays(currentWeekStart.value, i);
@@ -65,6 +66,7 @@ const weekDays = computed((): DayData[] => {
   });
 });
 
+// Load inventory data from API
 async function loadInventories() {
   loading.value = true;
   try {
@@ -76,6 +78,7 @@ async function loadInventories() {
     const response = await get<InventoriesResponse>("/inventories", params);
     inventoryItems.value = response?.inventories ?? [];
 
+    // Map transactions by inventory id
     for (const item of inventoryItems.value) {
       transactions.value[item.inventory_id] =
         item.daily_transaction_summary ?? [];
@@ -87,7 +90,7 @@ async function loadInventories() {
   }
 }
 
-// Watch and react when currentWeekStart changes
+// Watch week changes
 watch(
   currentWeekStart,
   () => {
@@ -95,7 +98,8 @@ watch(
   },
   { immediate: true },
 );
-// Watch when the filterData changes
+
+// Watch filter changes
 watch(
   () => filterData.search,
   () => {
