@@ -116,7 +116,6 @@
     </template>
   </UModal>
 </template>
-
 <script setup lang="ts">
 // Types pour la configuration des champs
 type FieldType = "text" | "number" | "select" | "textarea";
@@ -166,11 +165,21 @@ const isOpen = computed({
   set: (val) => emit("update:open", val),
 });
 
-// État du formulaire
+// État local du formulaire
 const formState = reactive<Record<string, any>>({});
 
 // État de soumission
 const isSubmitting = ref(false);
+
+// Sync depuis props vers local (init)
+watch(() => props.modelValue, (val) => {
+  if (val) Object.assign(formState, val);
+}, { immediate: true, deep: true });
+
+// Sync depuis local vers parent (à chaque changement)
+watch(formState, (val) => {
+  emit("update:modelValue", { ...val });
+}, { deep: true });
 
 // Init du form state
 function initFormState() {
@@ -230,7 +239,4 @@ watch(() => props.open, (newOpen) => {
     initFormState();
   }
 });
-
-// Init au montage
-// initFormState();
 </script>
