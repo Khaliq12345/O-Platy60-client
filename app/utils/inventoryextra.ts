@@ -1,4 +1,4 @@
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isBefore, isEqual, parse } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { Ref } from "vue";
 import type {
@@ -10,13 +10,6 @@ import type {
 export type InventoryTransactions = Record<string, DailyTransactionSummary[]>;
 export type InventorySaleInputs = Record<string, number[]>;
 
-interface InventoryMetricsContext {
-  items: Inventory[];
-  days: DayData[];
-  transactions: InventoryTransactions;
-  saleInputs: InventorySaleInputs;
-}
-
 interface SaveInventorySaleArgs {
   post: (url: string, payload: Record<string, unknown>) => Promise<unknown>;
   toast: { add: (payload: Record<string, unknown>) => void };
@@ -25,121 +18,111 @@ interface SaveInventorySaleArgs {
   createdAt: string;
 }
 
-function findTransaction(
-  transactions: InventoryTransactions,
-  inventoryId: string,
-  date: string,
+// Parse une date YYYY-MM-DD
+function parseDate(dateStr: string): Date {
+  return parse(dateStr, "yyyy-MM-dd", new Date());
+}
+
+// Trouve une transaction pour une date exacte
+function findTransactionForDate(
+  transactions: DailyTransactionSummary[],
+  targetDate: string,
 ): DailyTransactionSummary | undefined {
-  return transactions[inventoryId]?.find((tx) => tx.summary_date === date);
-}
-
-function getItemInitialQuantity(items: Inventory[], inventoryId: string): number {
-  return items.find((item) => item.inventory_id === inventoryId)?.initial_quantity ?? 0;
-}
-
-function getSaleValueForDay(
-  inventoryId: string,
-  dayIndex: number,
-  date: string,
-  saleInputs: InventorySaleInputs,
-  transactions: InventoryTransactions,
-): number {
-  const inputValue = saleInputs[inventoryId]?.[dayIndex];
-  if (typeof inputValue === "number") {
-    return inputValue;
-  }
-
-  return findTransaction(transactions, inventoryId, date)?.total_sales ?? 0;
+  return transactions.find((tx) => tx.summary_date === targetDate);
 }
 
 export function formatInventoryDay(dateStr: string, pattern: string): string {
-  return format(parseISO(dateStr), pattern, { locale: fr }).toUpperCase();
+  try {
+    return format(parseISO(dateStr), pattern, { locale: fr }).toUpperCase();
+  } catch {
+    return dateStr;
+  }
 }
 
-export function getEntryQuantity(
-  transactions: InventoryTransactions,
-  inventoryId: string,
+// Récupère les entrées pour un jour
+export function getEntryForDay(
+  transactions: DailyTransactionSummary[],
   date: string,
 ): number {
-  return findTransaction(transactions, inventoryId, date)?.total_quantity ?? 0;
+  const tx = findTransactionForDate(transactions, date);
+  return tx?.total_quantity ?? 0;
 }
 
+// Récupère les ventes pour un jour
+export function getSalesForDay(
+  transactions: DailyTransactionSummary[],
+  date: string,
+): number {
+  const tx = findTransactionForDate(transactions, date);
+  return tx?.total_sales ?? 0;
+}
+
+// Initialise les inputs de vente
 export function syncSaleInputsForItems(
   items: Inventory[],
   days: DayData[],
-  transactions: InventoryTransactions,
-  saleInputs: Ref<InventorySaleInputs>,
+  transactions: Record<string, DailyTransactionSummary[]>,
+  saleInputs: Ref<Record<string, number[]>>,
 ): void {
+  const newInputs: Record<string, number[]> = {};
+  
   items.forEach((item) => {
-    if (!saleInputs.value[item.inventory_id]) {
-      saleInputs.value[item.inventory_id] = days.map((day) => {
-        return findTransaction(transactions, item.inventory_id, day.date)?.total_sales ?? 0;
-      });
-    }
+    const itemTransactions = transactions[item.inventory_id] ?? [];
+    
+    newInputs[item.inventory_id] = days.map((day) => {
+      return getSalesForDay(itemTransactions, day.date);
+    });
   });
+  
+  saleInputs.value = newInputs;
 }
 
-export function getInitialQuantityForDay(
-  inventoryId: string,
-  dayIndex: number,
-  context: InventoryMetricsContext,
-): number {
-  let runningRemaining = getItemInitialQuantity(context.items, inventoryId);
-  if (dayIndex <= 0) {
-    return runningRemaining;
-  }
-
-  for (let i = 0; i < dayIndex; i += 1) {
-    const day = context.days[i];
-    const entries = getEntryQuantity(context.transactions, inventoryId, day.date);
-    const sales = getSaleValueForDay(
-      inventoryId,
-      i,
-      day.date,
-      context.saleInputs,
-      context.transactions,
-    );
-    runningRemaining = Math.max(0, runningRemaining + entries - sales);
-  }
-
-  return runningRemaining;
-}
-
-export function calculateFinalStockForDay(
-  inventoryId: string,
-  date: string,
-  dayIndex: number,
-  context: InventoryMetricsContext,
-): number {
-  const initial = getInitialQuantityForDay(inventoryId, dayIndex, context);
-  const entries = getEntryQuantity(context.transactions, inventoryId, date);
-  return Math.max(0, initial + entries);
-}
-
-export function calculateRemainingForDay(
-  inventoryId: string,
-  date: string,
-  dayIndex: number,
-  context: InventoryMetricsContext,
-): number {
-  const finalStock = calculateFinalStockForDay(inventoryId, date, dayIndex, context);
-  const sales = getSaleValueForDay(
-    inventoryId,
-    dayIndex,
-    date,
-    context.saleInputs,
-    context.transactions,
-  );
-  return Math.max(0, finalStock - sales);
-}
-
-export function getCurrentStockForToday(
+// CORRECTION CLÉ : Calcule le stock initial pour un jour donné
+// Stock initial = initial_quantity + toutes les entrées des jours précédents - toutes les ventes des jours précédents
+// Mais UNIQUEMENT pour les jours de la semaine affichée
+export function calculateInitialStock(
   item: Inventory,
-  transactions: InventoryTransactions,
-  today = new Date().toISOString().split("T")[0],
+  days: DayData[],
+  dayIndex: number,
+  transactions: DailyTransactionSummary[],
 ): number {
-  const tx = findTransaction(transactions, item.inventory_id, today);
-  return tx?.total_quantity ?? item.initial_quantity ?? 0;
+  const targetDay = days[dayIndex];
+  const targetDate = parseDate(targetDay.date);
+  
+  let stock = item.initial_quantity ?? 0;
+  
+  // Parcourir TOUS les jours de la semaine avant le jour cible
+  for (let i = 0; i < dayIndex; i++) {
+    const currentDay = days[i];
+    const currentDate = parseDate(currentDay.date);
+    
+    // Ne prendre en compte que les jours AVANT le jour cible
+    if (isBefore(currentDate, targetDate) || isEqual(currentDate, targetDate)) {
+      const sales = getSalesForDay(transactions, currentDay.date);
+      const entries = getEntryForDay(transactions, currentDay.date);
+      
+      stock = stock - sales + entries;
+      if (stock < 0) stock = 0;
+    }
+  }
+  
+  return stock;
+}
+
+// Stock final = stock initial du jour + entrées du jour
+export function calculateFinalStock(
+  initialStock: number,
+  entries: number,
+): number {
+  return Math.max(0, initialStock + entries);
+}
+
+// Restant = stock final - ventes du jour (input utilisateur)
+export function calculateRemaining(
+  finalStock: number,
+  sales: number,
+): number {
+  return Math.max(0, finalStock - sales);
 }
 
 export function toggleSummaryState(
