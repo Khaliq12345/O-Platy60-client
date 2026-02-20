@@ -1,48 +1,58 @@
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { Ref } from "vue";
-import type { Inventory, DayData, DailyTransactionSummary } from "~/types/inventory";
 
-export type InventoryTransactions = Record<string, DailyTransactionSummary[]>;
+// Nouveau type pour les données du backend
+export interface ProductDaySummary {
+  product_name: string;
+  day: string; // YYYY-MM-DD
+  initial_portion: number;
+  entry: number;
+  final_portion: number;
+  sale: number;
+  remaining: number;
+}
+
+export type ProductsSummary = Record<string, ProductDaySummary[]>;
 
 interface UseInventoryOptions {
-  items: Ref<Inventory[]>;
-  days: Ref<DayData[]>;
-  transactions: Ref<InventoryTransactions>;
+  products: Ref<ProductsSummary>;
+  days: Ref<string[]>; // Juste les dates YYYY-MM-DD
 }
 
 interface UseInventoryReturn {
   saleInputs: Ref<Record<string, number[]>>;
   openSummaries: Ref<Record<string, boolean>>;
-  formatDayLabel: (dateStr: string, pattern?: string) => string;
+  formatDayLabel: (dateStr: string) => string;
   formatDayFull: (dateStr: string) => string;
-  findTx: (inventoryId: string, date: string) => DailyTransactionSummary | undefined;
-  getMetric: (inventoryId: string, date: string, type: 'initial' | 'entries' | 'final' | 'remaining') => number;
-  toggleSummary: (inventoryId: string) => void;
-  updateSale: (item: Inventory, day: DayData, index: number, post: Function, toast: any) => Promise<void>;
+  getDayData: (productName: string, date: string) => ProductDaySummary | undefined;
+  getMetric: (productName: string, date: string, field: keyof ProductDaySummary) => number;
+  toggleSummary: (productName: string) => void;
+  updateSale: (productName: string, dayIndex: number, post: Function, toast: any) => Promise<void>;
 }
 
 export function useInventoryLogic(options: UseInventoryOptions): UseInventoryReturn {
-  const { items, days, transactions } = options;
+  const { products, days } = options;
   
   const saleInputs = ref<Record<string, number[]>>({});
   const openSummaries = ref<Record<string, boolean>>({});
 
-  // Init sale inputs from transactions
-  watch(() => [items.value, transactions.value], () => {
+  // Init sale inputs from data
+  watch(() => [products.value, days.value], () => {
     const inputs: Record<string, number[]> = {};
-    for (const item of items.value) {
-      inputs[item.inventory_id] = days.value.map(day => {
-        const tx = findTx(item.inventory_id, day.date);
-        return tx?.total_sales ?? 0;
+    
+    for (const [productName, summaries] of Object.entries(products.value)) {
+      inputs[productName] = days.value.map(day => {
+        const data = getDayData(productName, day);
+        return data?.sale ?? 0;
       });
     }
     saleInputs.value = inputs;
   }, { immediate: true });
 
-  function formatDayLabel(dateStr: string, pattern: string = "EEE dd"): string {
+  function formatDayLabel(dateStr: string): string {
     try {
-      return format(parseISO(dateStr), pattern, { locale: fr }).toUpperCase();
+      return format(parseISO(dateStr), "EEE dd", { locale: fr }).toUpperCase();
     } catch {
       return dateStr;
     }
@@ -56,50 +66,46 @@ export function useInventoryLogic(options: UseInventoryOptions): UseInventoryRet
     }
   }
 
-  function findTx(inventoryId: string, date: string): DailyTransactionSummary | undefined {
-    return transactions.value[inventoryId]?.find(tx => tx.summary_date === date);
+  // Récupère les données pour un produit et un jour (somme si plusieurs)
+  function getDayData(productName: string, date: string): ProductDaySummary | undefined {
+    const summaries = products.value[productName] ?? [];
+    const dayEntries = summaries.filter(s => s.day === date);
+    
+    if (dayEntries.length === 0) return undefined;
+    if (dayEntries.length === 1) return dayEntries[0];
+    
+    // Somme si plusieurs entrées pour le même jour
+    return {
+      product_name: productName,
+      day: date,
+      initial_portion: dayEntries[0].initial_portion, // Prend le premier
+      entry: dayEntries.reduce((sum, s) => sum + s.entry, 0),
+      final_portion: dayEntries.reduce((sum, s) => sum + s.final_portion, 0),
+      sale: dayEntries.reduce((sum, s) => sum + s.sale, 0),
+      remaining: dayEntries.reduce((sum, s) => sum + s.remaining, 0),
+    };
   }
 
-  function getMetric(inventoryId: string, date: string, type: 'initial' | 'entries' | 'final' | 'remaining'): number {
-    const item = items.value.find(i => i.inventory_id === inventoryId);
-    const tx = findTx(inventoryId, date);
-    
-    if (!item) return 0;
-    if (!tx) {
-      if (type === 'initial') return item.initial_quantity ?? 0;
-      return 0;
-    }
-    
-    const sales = tx.total_sales ?? 0;
-    const quantity = tx.total_quantity ?? 0;
-    
-    switch (type) {
-      case 'initial':
-        return Math.max(0, quantity > item.initial_quantity ? item.initial_quantity : quantity);
-      case 'entries':
-        return Math.max(0, quantity - item.initial_quantity);
-      case 'final':
-        return quantity;
-      case 'remaining':
-        return Math.max(0, quantity - sales);
-      default:
-        return 0;
-    }
+  function getMetric(productName: string, date: string, field: keyof ProductDaySummary): number {
+    const data = getDayData(productName, date);
+    if (!data) return 0;
+    const value = data[field];
+    return typeof value === 'number' ? value : 0;
   }
 
-  function toggleSummary(inventoryId: string) {
-    openSummaries.value[inventoryId] = !openSummaries.value[inventoryId];
+  function toggleSummary(productName: string) {
+    openSummaries.value[productName] = !openSummaries.value[productName];
   }
 
-  async function updateSale(item: Inventory, day: DayData, index: number, post: Function, toast: any) {
+  async function updateSale(productName: string, dayIndex: number, post: Function, toast: any) {
+    const day = days.value[dayIndex];
     try {
-      await post("/inventories/transactions", {
-        inventory_id: item.inventory_id,
-        sale: saleInputs.value[item.inventory_id][index] ?? 0,
-        created_at: day.date,
+      await post("/products/transaction", {
+        product_name: productName,
+        sale: saleInputs.value[productName][dayIndex] ?? 0,
+        day: day,
       });
       toast.add({ title: "Succès", description: "Vente enregistrée", color: "success" });
-      window.location.reload();
     } catch {
       toast.add({ title: "Erreur", description: "Impossible d'enregistrer", color: "error" });
     }
@@ -110,7 +116,7 @@ export function useInventoryLogic(options: UseInventoryOptions): UseInventoryRet
     openSummaries,
     formatDayLabel,
     formatDayFull,
-    findTx,
+    getDayData,
     getMetric,
     toggleSummary,
     updateSale,

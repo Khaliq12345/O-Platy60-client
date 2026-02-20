@@ -16,10 +16,9 @@
         <Loading v-if="loading" />
 
         <InventoryTable
-          v-else-if="inventoryItems.length > 0"
-          :items="inventoryItems"
+          v-else-if="Object.keys(productsData).length > 0"
+          :products="productsData"
           :days="weekDays"
-          :transactions="transactions"
         />
 
         <InventoryEmptyState v-else />
@@ -30,87 +29,40 @@
 
 <script setup lang="ts">
 import { addDays, format, startOfWeek } from "date-fns";
-import type {
-  Inventory,
-  InventoriesResponse,
-  DayData,
-  DailyTransactionSummary,
-} from "~/types/inventory";
+import type { ProductsSummary } from "~/utils/inventoryextra";
 
-const { get } = useApi();
+const { post } = useApi();
 
-// Reactive state
 const loading = ref(true);
-const inventoryItems = ref<Inventory[]>([]);
-const transactions = ref<Record<string, DailyTransactionSummary[]>>({});
+const productsData = ref<ProductsSummary>({});
 const currentWeekStart = ref(startOfWeek(new Date(), { weekStartsOn: 1 }));
-const filterData = reactive({
-  search: "",
-  start_date: "",
-  end_date: "",
-});
+const filterData = reactive({ search: "" });
 
-// Provide to child components
 provide("weekStart", currentWeekStart);
 provide("filterInfo", filterData);
 
-// Generate 7 days from week start
-const weekDays = computed((): DayData[] => {
-  return Array.from({ length: 7 }, (_, i) => {
-    const date = addDays(currentWeekStart.value, i);
-    return {
-      date: format(date, "yyyy-MM-dd"),
-      entry: 0,
-      sale: 0,
-    };
-  });
+const weekDays = computed(() => {
+  return Array.from({ length: 7 }, (_, i) => 
+    format(addDays(currentWeekStart.value, i), "yyyy-MM-dd")
+  );
 });
 
-// Load inventory data from API
-async function loadInventories() {
+async function loadData() {
   loading.value = true;
   try {
-    const params = {
+    const response = await post<ProductsSummary>("/products/transaction/summary", {
       start_date: format(currentWeekStart.value, "yyyy-MM-dd"),
       end_date: format(addDays(currentWeekStart.value, 6), "yyyy-MM-dd"),
       search: filterData.search,
-    };
-
-    const response = await get<InventoriesResponse>("/inventories", params);
-    const items = response?.inventories ?? [];
-    
-    // Extraire les transactions dans un objet plat
-    const txs: Record<string, DailyTransactionSummary[]> = {};
-    for (const item of items) {
-      txs[item.inventory_id] = item.daily_transaction_summary ?? [];
-    }
-    
-    transactions.value = txs;
-    inventoryItems.value = items;
-    
+    });
+    productsData.value = response ?? {};
   } catch (error) {
-    console.error("Erreur:", error);
-    inventoryItems.value = [];
-    transactions.value = {};
+    productsData.value = {};
   } finally {
     loading.value = false;
   }
 }
 
-// Watch week changes
-watch(
-  () => currentWeekStart.value,
-  () => {
-    loadInventories();
-  },
-  { immediate: true },
-);
-
-// Watch filter changes
-watch(
-  () => filterData.search,
-  () => {
-    loadInventories();
-  },
-);
+watch(() => currentWeekStart.value, loadData, { immediate: true });
+watch(() => filterData.search, loadData);
 </script>

@@ -1,18 +1,15 @@
 <template>
   <div class="space-y-2">
     <div
-      v-for="item in items"
-      :key="item.inventory_id"
-      class="px-1 space-y-2 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden"
+      v-for="(summaries, productName) in products"
+      :key="productName"
+      class="px-1 space-y-2 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm"
     >
       <!-- Header -->
       <div class="p-2 flex items-center justify-between">
         <h3 class="font-semibold text-gray-900 dark:text-white truncate">
-          {{ item.name }}
+          {{ productName }}
         </h3>
-        <span class="text-xs text-gray-500">
-          {{ item.initial_quantity }} {{ item.unit }}
-        </span>
       </div>
 
       <!-- Days Carousel -->
@@ -25,104 +22,76 @@
         <UPageCard class="w-[70%] mx-auto">
           <template #title>
             <span class="text-primary font-semibold">
-              {{ formatDayFull(day.date) }}
+              {{ formatDayFull(day) }}
             </span>
           </template>
 
           <template #description>
             <div class="space-y-3">
-              <div class="flex items-center justify-between">
-                <span class="text-xs text-gray-400 uppercase">Stock Initial</span>
-                <span class="text-lg font-medium">{{ getMetric(item.inventory_id, day.date, 'initial') }}</span>
+              <div class="flex justify-between">
+                <span class="text-xs text-gray-400">Stock Initial</span>
+                <span>{{ getMetric(productName, day, 'initial_portion') }}</span>
               </div>
 
-              <div class="flex items-center justify-between">
-                <span class="text-xs text-gray-400 uppercase">Entrées</span>
-                <span class="text-lg font-medium">{{ getMetric(item.inventory_id, day.date, 'entries') }}</span>
+              <div class="flex justify-between">
+                <span class="text-xs text-gray-400">Entrées</span>
+                <span>{{ getMetric(productName, day, 'entry') }}</span>
               </div>
 
               <div>
-                <div class="text-xs text-primary uppercase mb-1">Sortie</div>
+                <div class="text-xs text-primary mb-1">Sortie</div>
                 <UInputNumber
-                  v-model.number="saleInputs[item.inventory_id][idx]"
+                  v-model.number="saleInputs[productName][idx]"
                   :min="0"
                   size="lg"
                   class="w-full"
-                  color="primary"
-                  @blur="handleUpdateSale(item, day, idx)"
+                  @blur="handleUpdateSale(productName, idx)"
                 />
               </div>
 
-              <div class="flex items-center justify-between">
-                <span class="text-xs text-blue-400 uppercase">Stock Final</span>
-                <span class="text-lg font-medium text-blue-600">{{ getMetric(item.inventory_id, day.date, 'final') }}</span>
+              <div class="flex justify-between">
+                <span class="text-xs text-blue-400">Stock Final</span>
+                <span class="text-blue-600">{{ getMetric(productName, day, 'final_portion') }}</span>
               </div>
 
-              <div class="flex items-center justify-between">
-                <span class="text-xs text-green-400 uppercase">Restant</span>
-                <span class="text-lg font-medium text-green-600">{{ getMetric(item.inventory_id, day.date, 'remaining') }}</span>
+              <div class="flex justify-between">
+                <span class="text-xs text-green-400">Restant</span>
+                <span class="text-green-600">{{ getMetric(productName, day, 'remaining') }}</span>
               </div>
             </div>
           </template>
         </UPageCard>
       </UCarousel>
-
-      <!-- Summary -->
-      <div class="px-4 pb-4">
-        <UButton
-          block
-          color="neutral"
-          variant="soft"
-          size="sm"
-          :icon="openSummaries[item.inventory_id] ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-          @click="toggleSummary(item.inventory_id)"
-        >
-          Calculer le sommaire
-        </UButton>
-
-        <InventoryDetails
-          v-if="openSummaries[item.inventory_id]"
-          v-model:open="openSummaries[item.inventory_id]"
-          :inventory-id="item.inventory_id"
-          :start-date="days[0]?.date"
-          :end-date="days[6]?.date"
-        />
-      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { Inventory, DayData, DailyTransactionSummary } from "~/types/inventory";
+import type { ProductsSummary } from "~/utils/inventoryextra";
 import { useInventoryLogic } from "~/utils/inventoryextra";
 
 const props = defineProps<{
-  items: Inventory[];
-  days: DayData[];
-  transactions: Record<string, DailyTransactionSummary[]>;
+  products: ProductsSummary;
+  days: string[];
 }>();
 
 const { post } = useApi();
 const toast = useToast();
 
-const itemsRef = computed(() => props.items);
+const productsRef = computed(() => props.products);
 const daysRef = computed(() => props.days);
-const transactionsRef = computed(() => props.transactions);
 
 const {
   saleInputs,
-  openSummaries,
   formatDayFull,
   getMetric,
-  toggleSummary,
   updateSale,
 } = useInventoryLogic({
-  items: itemsRef,
+  products: productsRef,
   days: daysRef,
-  transactions: transactionsRef,
 });
 
-function handleUpdateSale(item: Inventory, day: DayData, index: number) {
-  updateSale(item, day, index, post, toast);
+function handleUpdateSale(productName: string, dayIndex: number) {
+  updateSale(productName, dayIndex, post, toast);
 }
 </script>
