@@ -10,21 +10,16 @@
         <h3 class="font-semibold text-gray-900 dark:text-white truncate">
           {{ item.name }}
         </h3>
-        <p class="flex items-center gap-2 mt-1 flex-wrap">
-          <span class="text-xs text-gray-500">
-            {{ item.initial_quantity }} {{ item.unit }}
-          </span>
-        </p>
+        <span class="text-xs text-gray-500">
+          {{ item.initial_quantity }} {{ item.unit }}
+        </span>
       </div>
 
       <!-- Days Carousel -->
       <UCarousel
         v-slot="{ item: day, index: idx }"
         :items="days"
-        :ui="{
-          item: 'basis-1/1 px-1',
-          container: 'gap-2 py-2',
-        }"
+        :ui="{ item: 'basis-1/1 px-1', container: 'gap-2 py-2' }"
         arrows
       >
         <UPageCard class="w-[70%] mx-auto">
@@ -36,23 +31,16 @@
 
           <template #description>
             <div class="space-y-3">
-              <!-- Stock Initial -->
               <div class="flex items-center justify-between">
                 <span class="text-xs text-gray-400 uppercase">Stock Initial</span>
-                <span class="text-lg font-medium text-gray-900 dark:text-white">
-                  {{ getInitialStock(item.inventory_id, idx) }}
-                </span>
+                <span class="text-lg font-medium">{{ getMetric(item.inventory_id, day.date, 'initial') }}</span>
               </div>
 
-              <!-- Entrées -->
               <div class="flex items-center justify-between">
                 <span class="text-xs text-gray-400 uppercase">Entrées</span>
-                <span class="text-lg font-medium text-gray-900 dark:text-white">
-                  {{ getEntries(item.inventory_id, day.date) }}
-                </span>
+                <span class="text-lg font-medium">{{ getMetric(item.inventory_id, day.date, 'entries') }}</span>
               </div>
 
-              <!-- Sortie -->
               <div>
                 <div class="text-xs text-primary uppercase mb-1">Sortie</div>
                 <UInputNumber
@@ -61,25 +49,18 @@
                   size="lg"
                   class="w-full"
                   color="primary"
-                  placeholder="0"
-                  @blur="updateSale(item, day, idx)"
+                  @blur="handleUpdateSale(item, day, idx)"
                 />
               </div>
 
-              <!-- Stock Final -->
               <div class="flex items-center justify-between">
                 <span class="text-xs text-blue-400 uppercase">Stock Final</span>
-                <span class="text-lg font-medium text-blue-600 dark:text-blue-400">
-                  {{ getFinalStock(item.inventory_id, day.date, idx) }}
-                </span>
+                <span class="text-lg font-medium text-blue-600">{{ getMetric(item.inventory_id, day.date, 'final') }}</span>
               </div>
 
-              <!-- Restant -->
               <div class="flex items-center justify-between">
                 <span class="text-xs text-green-400 uppercase">Restant</span>
-                <span class="text-lg font-medium text-green-600 dark:text-green-400">
-                  {{ getRemaining(item.inventory_id, day.date, idx) }}
-                </span>
+                <span class="text-lg font-medium text-green-600">{{ getMetric(item.inventory_id, day.date, 'remaining') }}</span>
               </div>
             </div>
           </template>
@@ -113,17 +94,7 @@
 
 <script setup lang="ts">
 import type { Inventory, DayData, DailyTransactionSummary } from "~/types/inventory";
-import {
-  formatInventoryDay,
-  syncSaleInputsForItems,
-  getEntryForDay,
-  getSalesForDay,
-  calculateInitialStock,
-  calculateFinalStock,
-  calculateRemaining,
-  toggleSummaryState,
-  saveInventorySale,
-} from "~/utils/inventoryextra";
+import { useInventoryLogic } from "~/utils/inventoryextra";
 
 const props = defineProps<{
   items: Inventory[];
@@ -134,65 +105,24 @@ const props = defineProps<{
 const { post } = useApi();
 const toast = useToast();
 
-const saleInputs = ref<Record<string, number[]>>({});
-const openSummaries = ref<Record<string, boolean>>({});
+const itemsRef = computed(() => props.items);
+const daysRef = computed(() => props.days);
+const transactionsRef = computed(() => props.transactions);
 
-// Watch pour synchroniser
-watch(
-  () => [props.items, props.days, props.transactions],
-  () => {
-    syncSaleInputsForItems(props.items, props.days, props.transactions, saleInputs);
-  },
-  { immediate: true, deep: true }
-);
+const {
+  saleInputs,
+  openSummaries,
+  formatDayFull,
+  getMetric,
+  toggleSummary,
+  updateSale,
+} = useInventoryLogic({
+  items: itemsRef,
+  days: daysRef,
+  transactions: transactionsRef,
+});
 
-function formatDayFull(dateStr: string): string {
-  return formatInventoryDay(dateStr, "EEE, MMM dd");
-}
-
-function getTransactions(inventoryId: string): DailyTransactionSummary[] {
-  return props.transactions[inventoryId] ?? [];
-}
-
-function getInitialStock(inventoryId: string, dayIndex: number): number {
-  const item = props.items.find(i => i.inventory_id === inventoryId);
-  if (!item) return 0;
-  
-  return calculateInitialStock(
-    item,
-    props.days,
-    dayIndex,
-    getTransactions(inventoryId)
-  );
-}
-
-function getEntries(inventoryId: string, date: string): number {
-  return getEntryForDay(getTransactions(inventoryId), date);
-}
-
-function getFinalStock(inventoryId: string, date: string, dayIndex: number): number {
-  const initial = getInitialStock(inventoryId, dayIndex);
-  const entries = getEntries(inventoryId, date);
-  return calculateFinalStock(initial, entries);
-}
-
-function getRemaining(inventoryId: string, date: string, dayIndex: number): number {
-  const finalStock = getFinalStock(inventoryId, date, dayIndex);
-  const sales = saleInputs.value[inventoryId]?.[dayIndex] ?? 0;
-  return calculateRemaining(finalStock, sales);
-}
-
-function toggleSummary(inventoryId: string) {
-  toggleSummaryState(openSummaries, inventoryId);
-}
-
-async function updateSale(item: Inventory, day: DayData, index: number) {
-  await saveInventorySale({
-    post,
-    toast,
-    inventoryId: item.inventory_id,
-    sale: saleInputs.value[item.inventory_id][index] ?? 0,
-    createdAt: day.date,
-  });
+function handleUpdateSale(item: Inventory, day: DayData, index: number) {
+  updateSale(item, day, index, post, toast);
 }
 </script>

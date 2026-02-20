@@ -29,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import { addDays, format, startOfWeek, parseISO, compareAsc } from "date-fns";
+import { addDays, format, startOfWeek } from "date-fns";
 import type {
   Inventory,
   InventoriesResponse,
@@ -69,7 +69,6 @@ const weekDays = computed((): DayData[] => {
 // Load inventory data from API
 async function loadInventories() {
   loading.value = true;
-  
   try {
     const params = {
       start_date: format(currentWeekStart.value, "yyyy-MM-dd"),
@@ -80,38 +79,17 @@ async function loadInventories() {
     const response = await get<InventoriesResponse>("/inventories", params);
     const items = response?.inventories ?? [];
     
-    // Traiter et trier les transactions par date
-    const newTransactions: Record<string, DailyTransactionSummary[]> = {};
-    
+    // Extraire les transactions dans un objet plat
+    const txs: Record<string, DailyTransactionSummary[]> = {};
     for (const item of items) {
-      // Récupérer les transactions et les trier par date croissante
-      const rawTransactions = item.daily_transaction_summary ?? [];
-      
-      // Trier par summary_date croissant (du plus ancien au plus récent)
-      const sortedTransactions = [...rawTransactions].sort((a, b) => {
-        return compareAsc(parseISO(a.summary_date), parseISO(b.summary_date));
-      });
-      
-      // Dédupliquer par date (garder la dernière si plusieurs pour même date)
-      const txByDate = new Map<string, DailyTransactionSummary>();
-      for (const tx of sortedTransactions) {
-        txByDate.set(tx.summary_date, tx);
-      }
-      
-      newTransactions[item.inventory_id] = Array.from(txByDate.values());
+      txs[item.inventory_id] = item.daily_transaction_summary ?? [];
     }
     
-    // Mettre à jour les items sans les transactions brutes
-    inventoryItems.value = items.map(item => ({
-      ...item,
-      daily_transaction_summary: [] // On ne garde pas ici, on utilise transactions
-    }));
-    
-    // Forcer la réactivité
-    transactions.value = { ...newTransactions };
+    transactions.value = txs;
+    inventoryItems.value = items;
     
   } catch (error) {
-    console.error("Erreur chargement inventaires:", error);
+    console.error("Erreur:", error);
     inventoryItems.value = [];
     transactions.value = {};
   } finally {

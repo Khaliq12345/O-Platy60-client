@@ -34,11 +34,11 @@
         <div class="grid grid-cols-8 gap-4 py-3 px-2">
           <div class="text-sm text-gray-600 dark:text-gray-400">Stock Initial</div>
           <div
-            v-for="(day, idx) in days"
+            v-for="day in days"
             :key="day.date"
             class="text-center text-sm text-gray-900 dark:text-gray-100"
           >
-            {{ getInitialStock(item.inventory_id, idx) }}
+            {{ getMetric(item.inventory_id, day.date, 'initial') }}
           </div>
         </div>
 
@@ -50,7 +50,7 @@
             :key="day.date"
             class="text-center text-sm text-gray-900 dark:text-gray-100"
           >
-            {{ getEntries(item.inventory_id, day.date) }}
+            {{ getMetric(item.inventory_id, day.date, 'entries') }}
           </div>
         </div>
 
@@ -58,11 +58,11 @@
         <div class="grid grid-cols-8 gap-4 py-3 px-2">
           <div class="text-sm text-gray-600 dark:text-gray-400">Stock Final</div>
           <div
-            v-for="(day, idx) in days"
+            v-for="day in days"
             :key="day.date"
             class="text-center text-sm font-medium text-blue-600 dark:text-blue-400"
           >
-            {{ getFinalStock(item.inventory_id, day.date, idx) }}
+            {{ getMetric(item.inventory_id, day.date, 'final') }}
           </div>
         </div>
 
@@ -80,8 +80,8 @@
               size="sm"
               class="w-full"
               color="primary"
-              @blur="updateSale(item, day, idx)"
-              @keyup.enter="updateSale(item, day, idx)"
+              @blur="handleUpdateSale(item, day, idx)"
+              @keyup.enter="handleUpdateSale(item, day, idx)"
             />
           </div>
         </div>
@@ -90,11 +90,11 @@
         <div class="grid grid-cols-8 gap-4 py-3 px-2 bg-green-50 dark:bg-green-950/30 rounded-md">
           <div class="text-sm text-green-600 dark:text-green-400 font-medium">Restant</div>
           <div
-            v-for="(day, idx) in days"
+            v-for="day in days"
             :key="day.date"
             class="text-center text-sm font-medium text-green-700 dark:text-green-300"
           >
-            {{ getRemaining(item.inventory_id, day.date, idx) }}
+            {{ getMetric(item.inventory_id, day.date, 'remaining') }}
           </div>
         </div>
       </div>
@@ -125,17 +125,7 @@
 
 <script setup lang="ts">
 import type { Inventory, DayData, DailyTransactionSummary } from "~/types/inventory";
-import {
-  formatInventoryDay,
-  syncSaleInputsForItems,
-  getEntryForDay,
-  getSalesForDay,
-  calculateInitialStock,
-  calculateFinalStock,
-  calculateRemaining,
-  toggleSummaryState,
-  saveInventorySale,
-} from "~/utils/inventoryextra";
+import { useInventoryLogic } from "~/utils/inventoryextra";
 
 const props = defineProps<{
   items: Inventory[];
@@ -146,69 +136,25 @@ const props = defineProps<{
 const { post } = useApi();
 const toast = useToast();
 
-const saleInputs = ref<Record<string, number[]>>({});
-const openSummaries = ref<Record<string, boolean>>({});
+// Convertir les props en refs pour le composable
+const itemsRef = computed(() => props.items);
+const daysRef = computed(() => props.days);
+const transactionsRef = computed(() => props.transactions);
 
-// Watch pour synchroniser les données
-watch(
-  () => [props.items, props.days, props.transactions],
-  () => {
-    syncSaleInputsForItems(props.items, props.days, props.transactions, saleInputs);
-  },
-  { immediate: true, deep: true }
-);
+const {
+  saleInputs,
+  openSummaries,
+  formatDayLabel,
+  getMetric,
+  toggleSummary,
+  updateSale,
+} = useInventoryLogic({
+  items: itemsRef,
+  days: daysRef,
+  transactions: transactionsRef,
+});
 
-function formatDayLabel(dateStr: string): string {
-  return formatInventoryDay(dateStr, "EEE dd");
-}
-
-function getItem(inventoryId: string): Inventory | undefined {
-  return props.items.find(i => i.inventory_id === inventoryId);
-}
-
-function getTransactions(inventoryId: string): DailyTransactionSummary[] {
-  return props.transactions[inventoryId] ?? [];
-}
-
-function getInitialStock(inventoryId: string, dayIndex: number): number {
-  const item = getItem(inventoryId);
-  if (!item) return 0;
-  
-  return calculateInitialStock(
-    item,
-    props.days,
-    dayIndex,
-    getTransactions(inventoryId)
-  );
-}
-
-function getEntries(inventoryId: string, date: string): number {
-  return getEntryForDay(getTransactions(inventoryId), date);
-}
-
-function getFinalStock(inventoryId: string, date: string, dayIndex: number): number {
-  const initial = getInitialStock(inventoryId, dayIndex);
-  const entries = getEntries(inventoryId, date);
-  return calculateFinalStock(initial, entries);
-}
-
-function getRemaining(inventoryId: string, date: string, dayIndex: number): number {
-  const finalStock = getFinalStock(inventoryId, date, dayIndex);
-  const sales = saleInputs.value[inventoryId]?.[dayIndex] ?? 0;
-  return calculateRemaining(finalStock, sales);
-}
-
-function toggleSummary(inventoryId: string) {
-  toggleSummaryState(openSummaries, inventoryId);
-}
-
-async function updateSale(item: Inventory, day: DayData, index: number) {
-  await saveInventorySale({
-    post,
-    toast,
-    inventoryId: item.inventory_id,
-    sale: saleInputs.value[item.inventory_id][index] ?? 0,
-    createdAt: day.date,
-  });
+function handleUpdateSale(item: Inventory, day: DayData, index: number) {
+  updateSale(item, day, index, post, toast);
 }
 </script>
