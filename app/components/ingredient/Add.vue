@@ -50,6 +50,11 @@ async function loadData() {
   try {
     categories.value = await loadCategories(toast);
   } catch (err) {
+    toast.add({
+      title: "Erreur",
+      description: "Impossible de charger les catégories.",
+      color: "error",
+    });
     loadError.value = true;
   } finally {
     loading.value = false;

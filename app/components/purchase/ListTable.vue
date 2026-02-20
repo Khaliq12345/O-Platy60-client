@@ -16,16 +16,11 @@ import type { ExpandableField } from "~/components/DataTable.vue";
 const UButton = resolveComponent("UButton");
 const UBadge = resolveComponent("UBadge");
 const UDropdownMenu = resolveComponent("UDropdownMenu");
-const PurchaseDelete = resolveComponent("PurchaseDelete");
+const DeleteConfirm = resolveComponent("DeleteConfirm");
 
 const props = defineProps<{
   purchases: PurchaseItem[];
   categories?: Category[];
-}>();
-
-const emit = defineEmits<{
-  editPurchase: [item: PurchaseItem];
-  delete: [item: PurchaseItem];
 }>();
 
 const { generateColor } = useColorGenerator();
@@ -164,9 +159,12 @@ const columns: TableColumn<PurchaseItem>[] = [
           onClick: () => navigateTo(`/purchases/${row.original.id}`),
         }),
         h("div", { class: "h-px bg-gray-200 dark:bg-gray-800 my-1" }),
-        h(PurchaseDelete, {
+        h(DeleteConfirm, {
           itemName: row.original.item_name,
-          purchaseId: row.original.id,
+          itemId: row.original.id,
+          apiEndpoint: "/purchases",
+          triggerLabel: "Supprimer",
+          onDeleted: () => window.location.reload(),
         }),
       ]),
     }),

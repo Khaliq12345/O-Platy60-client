@@ -21,8 +21,6 @@
       :products="products"
       :categories="categories"
       :ingredients="ingredients"
-      @edit="onEdit"
-      @delete="onDelete"
       class="grow"
     />
 
@@ -54,10 +52,13 @@ import type { Category } from "~/types/category";
 import type { Product } from "~/types/product";
 import type { Ingredient } from "~/types/ingredient";
 
+import { loadCategories } from "~/utils/categories";
+import { loadIngredients } from "~/utils/ingredients";
+
 // Routing & API
 const route = useRoute();
 const router = useRouter();
-const { get, del } = useApi();
+const { get } = useApi();
 const toast = useToast();
 
 // Données principales
@@ -89,42 +90,14 @@ const filterQuery = ref({
 provide("categories", categories);
 provide("ingredients", ingredients);
 
-// Chargement des catégories
-async function loadCategories() {
-  try {
-    const res = await get<{ categories: Category[]; count: number }>(
-      "/categories",
-    );
-    categories.value = res.categories;
-  } catch (error) {
-    toast.add({
-      title: "Erreur",
-      description: "Impossible de charger les catégories",
-      color: "error",
-    });
-  }
-}
-
-// Chargement des ingrédients
-async function loadIngredients() {
-  try {
-    const res = await get<{ ingredients: Ingredient[]; count: number }>(
-      "/ingredients",
-    );
-    ingredients.value = res.ingredients;
-  } catch (error) {
-    toast.add({
-      title: "Erreur",
-      description: "Impossible de charger les ingrédients",
-      color: "error",
-    });
-  }
-}
-
 // Chargement des produits
 async function loadProducts() {
   loading.value = true;
   try {
+
+    ingredients.value = (await loadIngredients()).ingredients;
+    categories.value = await loadCategories();
+
     const params = {
       limit: query.value.limit,
       offset: (query.value.page - 1) * query.value.limit,
@@ -181,37 +154,8 @@ function handleExport() {
   console.log("Export CSV");
 }
 
-// Édition d'un produit
-function onEdit(item: Product) {
-  selectedProduct.value = item;
-  showEdit.value = true;
-}
-
-// Suppression d'un produit
-async function onDelete(item: Product) {
-  if (!confirm(`Supprimer "${item.name}" ?`)) return;
-
-  try {
-    await del(`/products/${item.product_id}`);
-    toast.add({
-      title: "Succès",
-      description: "Produit supprimé",
-      color: "success",
-    });
-    loadProducts();
-  } catch (error) {
-    toast.add({
-      title: "Erreur",
-      description: "Impossible de supprimer",
-      color: "error",
-    });
-  }
-}
-
 // Init
 onMounted(() => {
-  loadCategories();
-  loadIngredients();
   loadProducts();
 });
 </script>

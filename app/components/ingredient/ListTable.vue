@@ -15,6 +15,7 @@ import type { ExpandableField } from "~/components/DataTable.vue";
 
 const UButton = resolveComponent("UButton");
 const UBadge = resolveComponent("UBadge");
+const DeleteConfirm = resolveComponent("DeleteConfirm");
 
 const props = defineProps<{
   ingredients: Ingredient[];
@@ -126,13 +127,13 @@ const columns: TableColumn<Ingredient>[] = [
     id: "actions",
     header: "",
     meta: { class: { th: "w-12", td: "text-right" } },
-    cell: ({ row }) => h(UButton, {
-      icon: "i-lucide-trash-2",
-      color: "error",
-      variant: "ghost",
-      size: "xs",
-      onClick: () => emit("delete", row.original),
-    }),
+    cell: ({ row }) =>
+      h(DeleteConfirm, {
+        itemName: row.original.name,
+        itemId: row.original.id,
+        apiEndpoint: "/ingredients",
+        onDeleted: () => window.location.reload(),
+      }),
   },
 ];
 </script>

@@ -63,7 +63,6 @@
 <script setup lang="ts">
 import { z } from "zod";
 import { loadInventories } from "~/utils/inventories";
-import type { Inventory } from "~/types/inventory";
 import type { Category } from "~/types/category";
 
 const props = defineProps<{

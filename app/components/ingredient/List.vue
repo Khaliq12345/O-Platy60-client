@@ -20,7 +20,6 @@
       v-else
       :ingredients="ingredients"
       :categories="categories"
-      @delete="onDelete"
       class="grow"
     />
 
@@ -43,11 +42,13 @@
 <script setup lang="ts">
 import type { Category } from "~/types/category";
 import type { Ingredient } from "~/types/ingredient";
+import { loadCategories } from "~/utils/categories";
+import { loadIngredients as load } from "~/utils/ingredients";
 
 // Routing & API
 const route = useRoute();
 const router = useRouter();
-const { get, del } = useApi();
+const { get } = useApi();
 const toast = useToast();
 
 // Données principales
@@ -74,35 +75,20 @@ const filterQuery = ref({
 // Partage des catégories aux composants enfants
 provide("categories", categories);
 
-// Chargement des catégories
-async function loadCategories() {
-  try {
-    const res = await get<{ categories: Category[]; count: number }>(
-      "/categories",
-    );
-    categories.value = res.categories;
-  } catch (error) {
-    toast.add({
-      title: "Erreur",
-      description: "Impossible de charger les catégories",
-      color: "error",
-    });
-  }
-}
-
 // Chargement des ingrédients
-async function loadIngredients() {
+async function load() {
   loading.value = true;
   try {
+
+    categories.value = await loadCategories();
+
     const params = {
       page: query.value.page,
       limit: query.value.limit,
       ...filterQuery.value,
     };
-    const response = await get<{
-      ingredients: Ingredient[];
-      count: number;
-    }>("/ingredients", params);
+
+    const response = await loadIngredients(params);
     ingredients.value = response.ingredients;
     query.value.total = response.count;
   } catch (error) {
@@ -125,20 +111,20 @@ function handleFilter() {
     ...filterQuery.value,
   };
   router.replace({ query: mergedQuery });
-  loadIngredients();
+  load();
 }
 
 // Changement de page
 function handlePageChange(newPage: number) {
   query.value.page = newPage;
-  loadIngredients();
+  load();
 }
 
 // Changement de limite par page
 function handleLimitChange(params: { limit: number; page: number }) {
   query.value.limit = params.limit;
   query.value.page = params.page;
-  loadIngredients();
+  load();
 }
 
 // Export CSV
@@ -146,30 +132,8 @@ function handleExport() {
   console.log("Export CSV");
 }
 
-// Suppression d'un ingrédient
-async function onDelete(item: Ingredient) {
-  if (!confirm(`Supprimer "${item.name}" ?`)) return;
-
-  try {
-    await del(`/ingredients/${item.id}`);
-    toast.add({
-      title: "Succès",
-      description: "Ingrédient supprimé",
-      color: "success",
-    });
-    loadIngredients();
-  } catch (error) {
-    toast.add({
-      title: "Erreur",
-      description: "Impossible de supprimer",
-      color: "error",
-    });
-  }
-}
-
 // Init
 onMounted(() => {
-  loadCategories();
-  loadIngredients();
+  load();
 });
 </script>
