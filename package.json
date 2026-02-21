@@ -14,11 +14,13 @@
     "@iconify-json/lucide": "^1.2.86",
     "@iconify-json/simple-icons": "^1.2.67",
     "@nuxt/ui": "^4.4.0",
+    "@nuxtjs/color-mode": "^4.0.0",
     "@pinia/nuxt": "^0.11.3",
     "@tailwindcss/vite": "^4.1.18",
     "date-fns": "^4.1.0",
     "nodemailer": "^8.0.1",
     "nuxt": "^4.2.2",
+    "nuxt-charts": "^2.1.2",
     "pinia-plugin-persistedstate": "^4.7.1",
     "tailwindcss": "^4.1.18",
     "zod": "^4.3.6"
