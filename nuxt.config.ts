@@ -16,7 +16,7 @@ export default defineNuxtConfig({
   },
 
   // Ensure the module is properly initialized
-  modules: ["@nuxt/ui", "@pinia/nuxt", "pinia-plugin-persistedstate"],
+  modules: ["@nuxt/ui", "@pinia/nuxt", "pinia-plugin-persistedstate", "nuxt-charts"],
 
   devtools: {
     enabled: true,
