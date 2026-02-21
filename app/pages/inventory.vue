@@ -6,7 +6,11 @@
 
     <template #body>
       <div class="lg:p-6 lg:space-y-6 space-y-4">
-        <InventoryHeader />
+        <PageHeader 
+          title="Inventaires" 
+          show-add 
+          @add="isAddModalOpen = true" 
+        />
 
         <div class="grid gap-2 items-center grid-cols-1 md:grid-cols-3">
           <InventoryWeekSelector />
@@ -24,7 +28,9 @@
         <InventoryEmptyState v-else />
       </div>
     </template>
+
   </UDashboardPanel>
+  <InventoryAdd v-model:open="isAddModalOpen" />
 </template>
 
 <script setup lang="ts">
@@ -35,6 +41,7 @@ const { post } = useApi();
 
 const loading = ref(true);
 const productsData = ref<ProductsSummary>({});
+const isAddModalOpen = ref(false);
 const currentWeekStart = ref(startOfWeek(new Date(), { weekStartsOn: 1 }));
 const filterData = reactive({ search: "" });
 
