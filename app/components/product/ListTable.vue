@@ -1,38 +1,61 @@
 <template>
-  <DataTable
-    :data="products"
-    :columns="columns"
-    :expandable-fields="expandableFields"
-  />
+  <div>
+    <!-- Loading state -->
+    <div v-if="!products" class="py-12 flex justify-center">
+      <Loading />
+    </div>
+
+    <!-- Table -->
+    <DataTable
+      v-else
+      :data="products"
+      :columns="columns"
+      :expandable-fields="expandableFields"
+    />
+
+    <!-- Modal d'édition -->
+    <ProductEdit 
+      v-model:open="isEditOpen" 
+      v-model:product="selectedProduct" 
+      @updated="handleUpdated" 
+    />
+  </div>
 </template>
 
 <script setup lang="ts">
-import { h, resolveComponent } from "vue";
+import { h, ref } from "vue";
 import type { TableColumn } from "@nuxt/ui";
 import type { Product } from "~/types/product";
 import type { Category } from "~/types/category";
 import type { Ingredient } from "~/types/ingredient";
 import type { ExpandableField } from "~/components/DataTable.vue";
-
 const UButton = resolveComponent("UButton");
 const UBadge = resolveComponent("UBadge");
 const DeleteConfirm = resolveComponent("DeleteConfirm");
 
-const props = defineProps<{
-  products: Product[];
+const props = withDefaults(defineProps<{
+  products?: Product[]; // Optionnel avec default
   categories?: Category[];
   ingredients?: Ingredient[];
-}>();
+}>(), {
+  products: () => [], // Default empty array
+  categories: () => [],
+  ingredients: () => [],
+});
+
+// État pour le modal d'édition
+const isEditOpen = ref(false);
+const selectedProduct = ref<Product | null>(null);
 
 const { generateColor } = useColorGenerator();
 
 const getCategory = (categoryId?: string): Category | undefined => {
-  if (!categoryId || !props.categories?.length) return undefined;
+  if (!categoryId) return undefined;
   return props.categories.find((cat) => cat.id === categoryId);
 };
 
 const getIngredient = (ingredientId?: string): Ingredient | undefined => {
-  if (!ingredientId || !props.ingredients?.length) return undefined;
+  if (!ingredientId) return undefined;
   return props.ingredients.find((ing) => ing.id === ingredientId);
 };
 
@@ -50,6 +73,17 @@ const getCategoryStyle = (categoryId?: string) => {
   const { hsl } = generateColor(name, { saturation: 60, lightness: 20 });
   return { backgroundColor: hsl, color: "white" };
 };
+
+// Ouvre le modal d'édition
+function openEdit(product: Product) {
+  selectedProduct.value = product;
+  isEditOpen.value = true;
+}
+
+// Reload après édition
+function handleUpdated() {
+  window.location.reload();
+}
 
 const expandableFields: ExpandableField<Product>[] = [
   { key: "initial_portion", label: "Portion Initiale" },
@@ -93,15 +127,9 @@ const columns: TableColumn<Product>[] = [
     header: "Nom",
     cell: ({ row }) =>
       h(
-        UButton,
-        {
-          variant: "link",
-          color: "neutral",
-          class:
-            "font-medium text-primary underline dark:text-white p-0 whitespace-nowrap",
-          onClick: () => emit("edit", row.original),
-        },
-        () => row.getValue("name"),
+        "span",
+        { class: "font-medium whitespace-nowrap" },
+        row.getValue("name"),
       ),
   },
   {
@@ -149,14 +177,25 @@ const columns: TableColumn<Product>[] = [
   {
     id: "actions",
     header: "",
-    meta: { class: { th: "w-12", td: "text-right" } },
+    meta: { class: { th: "w-24", td: "text-right" } },
     cell: ({ row }) =>
-      h(DeleteConfirm, {
-        itemName: row.original.name,
-        itemId: row.original.product_id,
-        apiEndpoint: "/products",
-        onDeleted: () => window.location.reload(),
-      }),
+      h("div", { class: "flex items-center justify-end gap-2" }, [
+        // Bouton d'édition
+        h(UButton, {
+          icon: "i-lucide-pencil",
+          color: "primary",
+          variant: "ghost",
+          size: "xs",
+          onClick: () => openEdit(row.original),
+        }),
+        // Bouton de suppression
+        h(DeleteConfirm, {
+          itemName: row.original.name,
+          itemId: row.original.product_id,
+          apiEndpoint: "/products",
+          onDeleted: () => window.location.reload(),
+        }),
+      ]),
   },
 ];
 </script>
