@@ -1,26 +1,23 @@
 <template>
   <div class="p-1 flex flex-col justify-between h-full min-w-[60%] mx-auto">
     <div class="mb-2 space-y-4">
-      <CategoryListHeader :categories-count="query.total" />
+      <!-- Header avec bouton Ajouter -->
+      <PageHeader 
+        title="Catégories" 
+        show-add 
+        @add="isAddModalOpen = true" 
+      />
 
-      <CategoryAdd @added="loadCategories" />
-
-      <div class="md:px-4 flex items-center gap-2 mb-2">
-        <UInput
-          v-model="searchQuery"
-          name="Search"
-          icon="i-heroicons-magnifying-glass"
-          placeholder="Rechercher une catégorie..."
-          class="flex-1"
-          @keyup.enter="applyFilter"
-        />
-        <UButton icon="i-heroicons-magnifying-glass" @click="applyFilter" />
-      </div>
+      <!-- Filtres global avec recherche -->
+      <Filters 
+        v-model:search-query="query.search"
+        @filter="handleFilter"
+      />
     </div>
 
     <Loading v-if="loading" />
 
-    <!-- // THe listing of the categories -->
+    <!-- Listing des catégories -->
     <UPageList v-else class="grow md:px-4">
       <UPageCard v-for="category in categories" :key="category.id" class="mb-4">
         <div class="flex items-center justify-between w-full">
@@ -28,12 +25,12 @@
             {{ category.name }}
           </span>
 
-          <!-- // Action buttons for each category -->
+          <!-- Boutons d'action -->
           <div class="flex items-center gap-1">
             <UButton
               color="neutral"
               variant="ghost"
-              icon="i-heroicons-pencil-square"
+              icon="i-lucide-pencil"
               size="xs"
               @click="openEditModal(category)"
             />
@@ -44,7 +41,7 @@
               api-endpoint="/categories"
               title="Supprimer la catégorie"
               message="Les produits associés ne seront plus catégorisés."
-              @deleted="loadCategories"
+              @deleted="handleDeleted"
             >
               <template #trigger>
                 <UButton
@@ -59,41 +56,26 @@
         </div>
       </UPageCard>
 
-      <!-- Display this if no category is found -->
-      <div
-        v-if="categories.length === 0"
-        class="text-center py-8 text-gray-500"
-      >
+      <!-- Empty state -->
+      <div v-if="categories.length === 0" class="text-center py-8 text-gray-500">
         Aucune catégorie trouvée
       </div>
     </UPageList>
 
-    <!-- Pagination section -->
+    <!-- Pagination -->
     <LimitPagination
       :page="query.page"
       :limit="query.limit"
       :total="query.total"
-      @change-page="
-        (val: number) => {
-          query.page = val;
-          loadCategories();
-        }
-      "
-      @change-limit="
-        (val: any) => {
-          query.limit = val.limit;
-          query.page = val.page;
-          loadCategories();
-        }
-      "
+      @change-page="handlePageChange"
+      @change-limit="handleLimitChange"
     />
 
-    <!-- This is the popup modal to edit the category -->
-    <CategoryEdit
-      v-model:open="isEditModalOpen"
-      :category="selectedCategory"
-      @updated="loadCategories"
-    />
+    <!-- Modal d'ajout -->
+    <CategoryAdd v-model:open="isAddModalOpen" />
+
+    <!-- Modal d'édition -->
+    <CategoryEdit v-model:open="isEditModalOpen" :category="selectedCategory" />
   </div>
 </template>
 
@@ -111,7 +93,7 @@ const query = ref({
   search: "",
 });
 
-const searchQuery = ref("");
+const isAddModalOpen = ref(false);
 const isEditModalOpen = ref(false);
 const selectedCategory = ref<Category | null>(null);
 
@@ -136,8 +118,7 @@ async function loadCategories() {
   }
 }
 
-function applyFilter() {
-  query.value.search = searchQuery.value;
+function handleFilter() {
   query.value.page = 1;
   loadCategories();
 }
@@ -145,6 +126,21 @@ function applyFilter() {
 function openEditModal(category: Category) {
   selectedCategory.value = category;
   isEditModalOpen.value = true;
+}
+
+function handlePageChange(val: number) {
+  query.value.page = val;
+  loadCategories();
+}
+
+function handleLimitChange(val: any) {
+  query.value.limit = val.limit;
+  query.value.page = val.page;
+  loadCategories();
+}
+
+function handleDeleted() {
+  window.location.reload();
 }
 
 onMounted(() => {

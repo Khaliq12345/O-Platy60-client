@@ -7,7 +7,7 @@
     <template #body>
       <div class="flex justify-center">
         <Loading v-if="loading" />
-        <div v-else-if="purchase" class="w-[60%] md:p-6 p-2">
+        <div v-else-if="purchase" class="md:w-[60%] md:p-6">
           <BackButton class="mb-2" />
           <PurchaseDetailHeader
             :item-name="purchase?.item_name || ''"

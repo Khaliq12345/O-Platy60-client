@@ -1,196 +1,69 @@
 <template>
-  <UModal v-model:open="isOpen">
-    <template #title>
-      Nouveau Produit
-    </template>
-
-    <template #body>
-      <UForm
-        :schema="schema"
-        :state="state"
-        class="space-y-4"
-        @submit="onSubmit"
-      >
-        <UFormField label="Nom" name="name" required>
-          <UInput
-            v-model="state.name"
-            placeholder="ex: Sandwich Poulet"
-            class="w-full"
-          />
-        </UFormField>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <UFormField label="Portion initiale" name="initial_portion" required>
-            <UInputNumber
-              v-model="state.initial_portion"
-              :min="0"
-              :step="0.1"
-              placeholder="ex: 150"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField label="Unité" name="unit" required>
-            <USelect
-              v-model="state.unit"
-              :items="unitOptions"
-              placeholder="Sélectionner"
-              class="w-full"
-            />
-          </UFormField>
-        </div>
-
-        <UFormField label="Catégorie" name="category">
-          <USelect
-            v-model="state.category"
-            :items="categoryOptions"
-            placeholder="Sélectionner une catégorie (optionnel)"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UFormField label="Ingrédient de base" name="ingredient_id" required>
-          <USelect
-            v-model="state.ingredient_id"
-            :items="ingredientOptions"
-            placeholder="Sélectionner un ingrédient"
-            class="w-full"
-          />
-        </UFormField>
-      </UForm>
-    </template>
-
-    <template #footer>
-      <div class="w-full flex justify-end gap-3">
-        <UButton
-          color="neutral"
-          variant="soft"
-          label="Annuler"
-          @click="isOpen = false"
-        />
-        <UButton
-          color="primary"
-          :loading="isSubmitting"
-          :disabled="isSubmitting || !isValid"
-          label="Créer"
-          @click="onSubmit"
-        />
-      </div>
-    </template>
-  </UModal>
+  <ModalForm
+    v-model:open="isOpen"
+    v-model:modelValue="formData"
+    title="Nouveau Produit"
+    :fields="fields"
+    :schema="schema"
+    submit-label="Créer"
+    @submit="onSubmit"
+  />
 </template>
 
 <script setup lang="ts">
 import { z } from "zod";
+import { Measurement, measurementOptions } from "~/utils/measurements";
 import type { Category } from "~/types/category";
 import type { Ingredient } from "~/types/ingredient";
-import { Measurement, type ProductCreate } from "~/types/product";
+import type { ProductCreate } from "~/types/product";
 
-const props = defineProps<{
-  open: boolean;
-}>();
-
-const emit = defineEmits<{
-  "update:open": [value: boolean];
-}>();
+const props = defineProps<{ open: boolean }>();
+const emit = defineEmits<{ "update:open": [boolean] }>();
 
 const { post } = useApi();
 const toast = useToast();
 
-const isSubmitting = ref(false);
+const isOpen = computed({ get: () => props.open, set: (v) => emit("update:open", v) });
 
 const categories = inject<Ref<Category[]>>("categories", ref([]));
 const ingredients = inject<Ref<Ingredient[]>>("ingredients", ref([]));
+const formData = ref<Record<string, any>>({});
 
-// Sync avec v-model:open
-const isOpen = computed({
-  get: () => props.open,
-  set: (val) => emit("update:open", val),
-});
-
-const unitOptions = [
-  { label: "Kilogramme (kg)", value: Measurement.KG },
-  { label: "Gramme (g)", value: Measurement.G },
-  { label: "Litre (L)", value: Measurement.L },
-  { label: "Unité", value: Measurement.UNIT },
-  { label: "Cuillère à café (tsp)", value: Measurement.TSP },
-  { label: "Cuillère à soupe (tbsp)", value: Measurement.TBSP },
-];
-
-const categoryOptions = computed(() => [
-  { label: "Aucune", value: undefined },
-  ...categories.value.map((cat) => ({ label: cat.name, value: cat.id })),
+const fields = computed(() => [
+  { name: "name", label: "Nom", type: "text" as const, required: true, placeholder: "ex: Sandwich Poulet" },
+  { name: "initial_portion", label: "Portion initiale", type: "number" as const, required: true, 
+    placeholder: "ex: 150", min: 0, step: 0.1, class: "sm:grid-cols-2" },
+  { name: "unit", label: "Unité", type: "select" as const, required: true, 
+    placeholder: "Sélectionner", options: measurementOptions, class: "sm:grid-cols-2" },
+  { name: "category", label: "Catégorie", type: "select" as const, placeholder: "Sélectionner une catégorie",
+    options: [{ label: "Aucune", value: undefined }, ...categories.value.map(c => ({ label: c.name, value: c.id }))] },
+  { name: "ingredient_id", label: "Ingrédient de base", type: "select" as const, required: true,
+    placeholder: "Sélectionner un ingrédient", options: ingredients.value.map(i => ({ label: i.name, value: i.id })) },
 ]);
-
-const ingredientOptions = computed(() =>
-  ingredients.value.map((ing) => ({ label: ing.name, value: ing.id }))
-);
 
 const schema = z.object({
   name: z.string().min(1, "Le nom est requis"),
-  initial_portion: z.number().min(0.1, "La portion doit être supérieure à 0"),
-  unit: z.enum(Measurement, {
-    errorMap: () => ({ message: "Veuillez sélectionner une unité" }),
-  }),
+  initial_portion: z.number().min(0.1, "La portion est requise"),
+  unit: z.enum(Measurement),
   category: z.string().optional(),
-  ingredient_id: z.string().min(1, "L'ingrédient de base est requis"),
+  ingredient_id: z.string().min(1, "Un ingrédient est requis"),
 });
 
-const state = reactive<Partial<ProductCreate>>({
-  name: "",
-  initial_portion: undefined,
-  unit: undefined,
-  category: undefined,
-  ingredient_id: undefined,
-});
-
-const isValid = computed(() => {
-  return state.name && state.initial_portion && state.unit && state.ingredient_id;
-});
-
-async function onSubmit() {
-  if (!isValid.value) {
-    toast.add({
-      title: "Erreur",
-      description: "Veuillez remplir tous les champs obligatoires",
-      color: "error",
-    });
-    return;
-  }
-
-  isSubmitting.value = true;
+async function onSubmit(data: any) {
   try {
     await post("/products", {
-      name: state.name,
-      initial_portion: state.initial_portion,
-      unit: state.unit,
-      category: state.category,
-      ingredient_id: state.ingredient_id,
-    });
+      name: data.name,
+      initial_portion: data.initial_portion,
+      unit: data.unit.toLowerCase(),
+      category: data.category,
+      ingredient_id: data.ingredient_id,
+    } as ProductCreate);
 
-    toast.add({
-      title: "Succès",
-      description: "Produit créé avec succès",
-      color: "success",
-    });
-
-    // Reset form
-    state.name = "";
-    state.initial_portion = undefined;
-    state.unit = undefined;
-    state.category = undefined;
-    state.ingredient_id = undefined;
-
+    toast.add({ title: "Succès", description: "Produit créé", color: "success" });
     isOpen.value = false;
     window.location.reload();
-  } catch (error) {
-    toast.add({
-      title: "Erreur",
-      description: "Impossible de créer le produit",
-      color: "error",
-    });
-  } finally {
-    isSubmitting.value = false;
+  } catch {
+    toast.add({ title: "Erreur", description: "Création échouée", color: "error" });
   }
 }
 </script>

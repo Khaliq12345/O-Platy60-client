@@ -1,80 +1,16 @@
 <template>
-  <UModal v-model:open="isOpen" title="Modifier le Produit">
-    <template #body>
-      <UForm
-        :schema="schema"
-        :state="state"
-        class="space-y-4"
-        @submit="onSubmit"
-      >
-        <UFormField label="Nom" name="name" required>
-          <UInput
-            v-model="state.name"
-            placeholder="ex: Sandwich Poulet"
-            class="w-full"
-          />
-        </UFormField>
-
-        <div class="grid grid-cols-2 gap-4">
-          <UFormField label="Portion initiale" name="initial_portion" required>
-            <UInputNumber
-              v-model="state.initial_portion"
-              :min="0"
-              :step="0.1"
-              placeholder="ex: 150"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField label="Unité" name="unit" required>
-            <USelect
-              v-model="state.unit"
-              :items="unitOptions"
-              placeholder="Sélectionner"
-              class="w-full"
-            />
-          </UFormField>
-        </div>
-
-        <UFormField label="Catégorie" name="category">
-          <USelect
-            v-model="state.category"
-            :items="categoryOptions"
-            placeholder="Sélectionner une catégorie (optionnel)"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UFormField label="Ingrédient de base" name="ingredient_id" required>
-          <USelect
-            v-model="state.ingredient_id"
-            :items="ingredientOptions"
-            placeholder="Sélectionner un ingrédient"
-            class="w-full"
-            disabled
-          />
-        </UFormField>
-      </UForm>
-    </template>
-
-    <template #footer>
-      <div class="flex justify-end gap-3">
-        <UButton
-          color="neutral"
-          variant="soft"
-          label="Annuler"
-          @click="isOpen = false"
-        />
-        <UButton
-          color="primary"
-          :loading="isSubmitting"
-          :disabled="isSubmitting"
-          label="Enregistrer"
-          @click="onSubmit"
-        />
-      </div>
-    </template>
-  </UModal>
+  <ModalForm
+    v-model:open="isOpen"
+    v-model="formState"
+    title="Modifier le Produit"
+    :fields="fields"
+    :schema="schema"
+    submit-label="Enregistrer"
+    :loading="loading"
+    :load-error="loadError"
+    @submit="onSubmit"
+    @reload="loadDependencies"
+  />
 </template>
 
 <script setup lang="ts">
@@ -93,11 +29,18 @@ const product = defineModel<Product>("product");
 const { put } = useApi();
 const toast = useToast();
 
-const isSubmitting = ref(false);
+// États de chargement des dépendances
+const loading = ref(false);
+const loadError = ref(false);
 
+// Données injectées
 const categories = inject<Ref<Category[]>>("categories", ref([]));
 const ingredients = inject<Ref<Ingredient[]>>("ingredients", ref([]));
 
+// État du formulaire
+const formState = ref<Record<string, any>>({});
+
+// Options pour les selects
 const unitOptions = [
   { label: "Kilogramme (kg)", value: Measurement.KG },
   { label: "Gramme (g)", value: Measurement.G },
@@ -116,48 +59,112 @@ const ingredientOptions = computed(() =>
   ingredients.value.map((ing) => ({ label: ing.name, value: ing.id }))
 );
 
+// Configuration des champs
+const fields = computed(() => [
+  {
+    name: "name",
+    label: "Nom",
+    type: "text",
+    required: true,
+    placeholder: "ex: Sandwich Poulet",
+  },
+  {
+    name: "initial_portion",
+    label: "Portion initiale",
+    type: "number",
+    required: true,
+    min: 0.1,
+    step: 0.1,
+    placeholder: "ex: 150",
+    class: "col-span-1",
+  },
+  {
+    name: "unit",
+    label: "Unité",
+    type: "select",
+    required: true,
+    options: unitOptions,
+    class: "col-span-1",
+  },
+  {
+    name: "category",
+    label: "Catégorie",
+    type: "select",
+    required: false,
+    placeholder: "Sélectionner une catégorie (optionnel)",
+    options: categoryOptions.value,
+  },
+  {
+    name: "ingredient_id",
+    label: "Ingrédient de base",
+    type: "select",
+    required: true,
+    placeholder: "Sélectionner un ingrédient",
+    options: ingredientOptions.value,
+    // Note: disabled géré via le composant ModalForm si besoin
+  },
+]);
+
+// Schema Zod aligné avec ProductUpdate du backend
 const schema = z.object({
   name: z.string().min(1, "Le nom est requis"),
   initial_portion: z.number().min(0.1, "La portion doit être supérieure à 0"),
-  unit: z.nativeEnum(Measurement, {
-    errorMap: () => ({ message: "Veuillez sélectionner une unité" }),
-  }),
-  category: z.string().optional(),
-  ingredient_id: z.string(),
+  unit: z.enum(Measurement),
+  category: z.string().optional(), // Peut être null/undefined pour "Aucune"
+  ingredient_id: z.string("L'ingrédient est requis"),
 });
 
-const state = reactive<ProductUpdate>({
-  name: "",
-  initial_portion: 0,
-  unit: Measurement.UNIT,
-  category: undefined,
-});
+// Chargement des dépendances (catégories, ingrédients)
+async function loadDependencies() {
+  loading.value = true;
+  loadError.value = false;
+  
+  try {
+    // Si les données sont déjà injectées et chargées, on considère que c'est OK
+    // Sinon, vous pouvez ajouter ici un fetch explicite
+    if (categories.value.length === 0 || ingredients.value.length === 0) {
+      // Optionnel: déclencher un événement pour charger les données côté parent
+      // ou fetch direct si vous avez les endpoints
+      loadError.value = true;
+    }
+  } catch {
+    loadError.value = true;
+  } finally {
+    loading.value = false;
+  }
+}
 
 // Sync avec le produit à éditer
 watch(
   () => product.value,
   (newProduct) => {
     if (newProduct) {
-      state.name = newProduct.name;
-      state.initial_portion = newProduct.initial_portion;
-      state.unit = newProduct.unit;
-      state.category = newProduct.category;
+      formState.value = {
+        name: newProduct.name,
+        initial_portion: newProduct.initial_portion,
+        unit: newProduct.unit,
+        category: newProduct.category,
+        ingredient_id: newProduct.ingredient_id,
+      };
     }
   },
   { immediate: true }
 );
 
-async function onSubmit() {
+// Soumission
+async function onSubmit(data: any) {
   if (!product.value?.product_id) return;
 
-  isSubmitting.value = true;
   try {
-    await put(`/products/${product.value.product_id}`, {
-      name: state.name,
-      initial_portion: state.initial_portion,
-      unit: state.unit,
-      category: state.category,
-    });
+    // Payload aligné avec ProductUpdate du backend
+    const payload: ProductUpdate = {
+      name: data.name,
+      initial_portion: data.initial_portion,
+      unit: data.unit,
+      category: data.category || undefined, // Convertit null/undefined
+    };
+
+    await put(`/products/${product.value.product_id}`, payload);
 
     toast.add({
       title: "Succès",
@@ -173,8 +180,12 @@ async function onSubmit() {
       description: "Impossible de mettre à jour le produit",
       color: "error",
     });
-  } finally {
-    isSubmitting.value = false;
+    throw error; // Remonte l'erreur pour que ModalForm gère l'état
   }
 }
+
+// Init au montage
+onMounted(() => {
+  loadDependencies();
+});
 </script>

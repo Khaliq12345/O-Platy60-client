@@ -72,26 +72,13 @@
 
 <script setup lang="ts">
 import { z } from "zod";
-import type { FormSubmitEvent } from "@nuxt/ui";
 
 interface Category {
   id: string;
   name: string;
 }
 
-const props = defineProps<{
-  open: boolean;
-}>();
-
-const emit = defineEmits<{
-  "update:open": [value: boolean];
-}>();
-
-const isOpen = computed({
-  get: () => props.open,
-  set: (val) => emit("update:open", val),
-});
-
+const isOpen = defineModel<boolean>("open");
 const processing = ref(false);
 const categories = ref<{ label: string; value: string }[]>([]);
 
@@ -99,13 +86,10 @@ const { get, post } = useApi();
 const toast = useToast();
 
 const schema = z.object({
-  name: z
-    .string()
-    .min(2, "Le nom doit contenir au moins 2 caractères")
-    .max(100),
-  initial_quantity: z.number().min(0, "La quantité doit être positive").int(),
-  unit: z.string().min(1, "Veuillez sélectionner une unité"),
-  category: z.string().min(1, "Veuillez sélectionner une catégorie"),
+  name: z.string("Ne peut etre vide"),
+  initial_quantity: z.number("La quantité doit être supérieure ou égale à zéro").min(0).int(),
+  unit: z.string("Ne peut être vide"),
+  category: z.string("Ne peut être vide"),
 });
 
 type Schema = z.output<typeof schema>;
@@ -137,7 +121,6 @@ const onSubmit = async () => {
       color: "success",
     });
 
-    // Reset form
     Object.assign(state, {
       name: "",
       initial_quantity: 0,
@@ -146,13 +129,11 @@ const onSubmit = async () => {
     });
 
     isOpen.value = false;
-    
-    // Reload la page après création
     window.location.reload();
   } catch (error) {
     toast.add({
       title: "Erreur",
-      description: "Une erreur est survenue lors de l'ajout du produit.",
+      description: "Une erreur est survenue.",
       color: "error",
     });
   } finally {
@@ -168,11 +149,7 @@ onMounted(async () => {
       value: cat.id,
     }));
   } catch (err) {
-    toast.add({
-      title: "Erreur",
-      description: "Impossible de charger les catégories.",
-      color: "error",
-    });
+    console.error(err);
   }
 });
 </script>

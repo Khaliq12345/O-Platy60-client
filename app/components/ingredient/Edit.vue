@@ -2,7 +2,7 @@
   <ModalForm
     v-model:open="isOpen"
     v-model:modelValue="formData"
-    title="Nouvel Ingrédient"
+    title="Modifier l'Ingrédient"
     :fields="fields"
     :schema="schema"
     :loading="loading"
@@ -18,12 +18,15 @@ import { z } from "zod";
 import { Measurement, measurementOptions } from "~/utils/measurements";
 import { loadCategories } from "~/utils/categories";
 import type { Category } from "~/types/category";
-import type { IngredientCreate } from "~/types/ingredient";
+import type { Ingredient, IngredientUpdate } from "~/types/ingredient";
 
-const props = defineProps<{ open: boolean }>();
+const props = defineProps<{ 
+  open: boolean;
+  ingredient: Ingredient | null;
+}>();
 const emit = defineEmits<{ "update:open": [boolean] }>();
 
-const { post } = useApi();
+const { put } = useApi();
 const toast = useToast();
 
 const isOpen = computed({ get: () => props.open, set: (v) => emit("update:open", v) });
@@ -44,6 +47,18 @@ async function loadData() {
   }
 }
 
+// Sync form data avec l'ingrédient à éditer
+watch(() => props.ingredient, (ingredient) => {
+  if (ingredient) {
+    formData.value = {
+      name: ingredient.name,
+      unit: ingredient.unit,
+      category: ingredient.category,
+      total_quantity: ingredient.total_quantity,
+    };
+  }
+}, { immediate: true });
+
 const fields = computed(() => [
   { name: "name", label: "Nom", type: "text" as const, required: true, placeholder: "ex: Farine de blé" },
   { name: "category", label: "Catégorie", type: "select" as const, placeholder: "Sélectionner une catégorie", 
@@ -61,21 +76,25 @@ const schema = z.object({
 });
 
 async function onSubmit(data: any) {
+  if (!props.ingredient?.id) return;
+  
   try {
-    await post("/ingredients", {
+    const payload: IngredientUpdate = {
       name: data.name,
       unit: data.unit.toLowerCase(),
       category: data.category,
       total_quantity: data.total_quantity,
-    } as IngredientCreate);
+    };
 
-    toast.add({ title: "Succès", description: "Ingrédient créé", color: "success" });
+    await put(`/ingredients/${props.ingredient.id}`, payload);
+
+    toast.add({ title: "Succès", description: "Ingrédient modifié", color: "success" });
     isOpen.value = false;
     window.location.reload();
   } catch {
-    toast.add({ title: "Erreur", description: "Création échouée", color: "error" });
+    toast.add({ title: "Erreur", description: "Modification échouée", color: "error" });
   }
 }
 
 watch(() => props.open, (open) => open && loadData());
-</script> 
+</script>

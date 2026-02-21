@@ -84,7 +84,7 @@ const confirmInput = ref("");
 const title = computed(() => props.title ?? `Supprimer ${props.itemName}`);
 const description = computed(() => props.description ?? "Cette action est irréversible");
 const confirmText = computed(() => props.confirmText ?? props.itemName);
-const triggerLabel = computed(() => props.triggerLabel ?? "Supprimer");
+const triggerLabel = computed(() => props.triggerLabel ?? "");
 
 const canDelete = computed(() => confirmInput.value === confirmText.value);
 

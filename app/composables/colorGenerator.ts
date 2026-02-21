@@ -1,4 +1,4 @@
-// composables/useColorGenerator.ts
+  // composables/useColorGenerator.ts
 
 /**
  * Génère une couleur HSL déterministe à partir d'une chaîne de caractères

@@ -4,10 +4,16 @@
     :columns="columns"
     :expandable-fields="expandableFields"
   />
+  
+  <!-- Modal d'édition intégré -->
+  <IngredientEdit
+    v-model:open="isEditOpen"
+    :ingredient="selectedIngredient"
+  />
 </template>
 
 <script setup lang="ts">
-import { h, resolveComponent } from "vue";
+import { h, resolveComponent, ref } from "vue";
 import type { TableColumn } from "@nuxt/ui";
 import type { Ingredient } from "~/types/ingredient";
 import type { Category } from "~/types/category";
@@ -15,15 +21,16 @@ import type { ExpandableField } from "~/components/DataTable.vue";
 
 const UButton = resolveComponent("UButton");
 const UBadge = resolveComponent("UBadge");
+const DeleteConfirm = resolveComponent("DeleteConfirm");
 
 const props = defineProps<{
   ingredients: Ingredient[];
   categories?: Category[];
 }>();
 
-const emit = defineEmits<{
-  delete: [item: Ingredient];
-}>();
+// État pour le modal d'édition
+const isEditOpen = ref(false);
+const selectedIngredient = ref<Ingredient | null>(null);
 
 const { generateColor } = useColorGenerator();
 
@@ -42,6 +49,12 @@ const getCategoryStyle = (categoryId?: string) => {
   const { hsl } = generateColor(name, { saturation: 60, lightness: 20 });
   return { backgroundColor: hsl, color: "white" };
 };
+
+// Ouvre le modal d'édition
+function openEdit(ingredient: Ingredient) {
+  selectedIngredient.value = ingredient;
+  isEditOpen.value = true;
+}
 
 const expandableFields: ExpandableField<Ingredient>[] = [
   { key: "unit", label: "Unité" },
@@ -90,12 +103,7 @@ const columns: TableColumn<Ingredient>[] = [
       class: "font-medium text-primary underline dark:text-white p-0",
       onClick: () => navigateTo(`/purchases?ingredient=${encodeURIComponent(row.original.name)}`),
     }, () => row.getValue("name")),
-  },
-  {
-    accessorKey: "unit",
-    header: "Unité",
-    meta: { class: { th: "hidden md:table-cell", td: "hidden md:table-cell" } },
-  },
+  },  
   {
     accessorKey: "total_quantity",
     header: "Quantité",
@@ -125,14 +133,25 @@ const columns: TableColumn<Ingredient>[] = [
   {
     id: "actions",
     header: "",
-    meta: { class: { th: "w-12", td: "text-right" } },
-    cell: ({ row }) => h(UButton, {
-      icon: "i-lucide-trash-2",
-      color: "error",
-      variant: "ghost",
-      size: "xs",
-      onClick: () => emit("delete", row.original),
-    }),
+    meta: { class: { th: "w-24", td: "text-right" } },
+    cell: ({ row }) =>
+      h("div", { class: "flex items-center justify-end gap-2" }, [
+        // Bouton d'édition
+        h(UButton, {
+          icon: "i-lucide-pencil",
+          color: "primary",
+          variant: "ghost",
+          size: "xs",
+          onClick: () => openEdit(row.original),
+        }),
+        // Bouton de suppression
+        h(DeleteConfirm, {
+          itemName: row.original.name,
+          itemId: row.original.id,
+          apiEndpoint: "/ingredients",
+          onDeleted: () => window.location.reload(),
+        }),
+      ]),
   },
 ];
 </script>

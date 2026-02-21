@@ -1,12 +1,14 @@
 <template>
   <div class="mx-auto text-wrap my-2 px-2" variant="naked">
     <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
-      <UFormField label="Nom" name="step_name" required>
-        <UInput
-          v-model="state.step_name"
-          placeholder="Ex: Poulet Grillé, Cuisses Sautées..."
-          icon="i-heroicons-tag"
+      <UFormField label="Produit" name="product_id" required>
+        <USelect
+          v-model="state.product_id"
+          :items="productOptions"
+          placeholder="Sélectionner un produit..."
           class="w-full"
+          :loading="loadingProducts"
+          :disabled="loadingProducts"
         />
       </UFormField>
 
@@ -17,8 +19,7 @@
             placeholder="Nombre de portions"
             class="w-full"
             :step="1"
-          >
-          </UInputNumber>
+          />
         </UFormField>
 
         <UFormField label="Quantité utilisée" name="quantity" required>
@@ -27,8 +28,7 @@
             placeholder="Entrer la quantité"
             class="w-full"
             :step="1"
-          >
-          </UInputNumber>
+          />
         </UFormField>
       </div>
 
@@ -39,7 +39,7 @@
           size="sm"
           icon="i-heroicons-check-circle"
           :loading="loading"
-          :disable="loading"
+          :disabled="loading || loadingProducts"
           :class="loading ? 'animate-pulse' : ''"
         >
           {{ loading ? "Ajout..." : "Ajouter" }}
@@ -58,21 +58,58 @@ const props = defineProps<{
   transformation: Transformation;
 }>();
 
-const { post } = useApi();
+const { get, post } = useApi();
 const toast = useToast();
 const emit = defineEmits<{ added: [] }>();
 
+// Chargement des produits
+const products = ref<Array<{ id: string; name: string }>>([]);
+const loadingProducts = ref(true);
+
+async function loadProducts() {
+  loadingProducts.value = true;
+  try {
+    const response = await get<{ products: Array<{ product_id: string; name: string }> }>("/products");
+    products.value = response.products.map(p => ({
+      id: p.product_id,
+      name: p.name,
+    }));
+  } catch (error) {
+    toast.add({
+      title: "Erreur",
+      description: "Impossible de charger les produits",
+      color: "error",
+    });
+  } finally {
+    loadingProducts.value = false;
+  }
+}
+
+// Options pour le select
+const productOptions = computed(() => 
+  products.value.map(p => ({
+    label: p.name,
+    value: p.id, // ID comme valeur
+  }))
+);
+
+// Récupère le nom du produit sélectionné
+const selectedProductName = computed(() => {
+  const product = products.value.find(p => p.id === state.product_id);
+  return product?.name || "";
+});
+
 // Schéma avec validation du stock max
 const schema = z.object({
-  step_name: z.string().min(1, "Nom de l'étape requis"),
+  product_id: z.string().min(1, "Produit requis"),
 
   portions: z.coerce
-    .number("Ne peut pas être vide")
+    .number()
     .min(1, "Minimum 1 portion")
     .int("Doit être un nombre entier"),
 
   quantity: z.coerce
-    .number("Ne peut pas être vide")
+    .number()
     .min(0.01, "Minimum 0.01")
     .positive("Doit être positif")
     .refine(
@@ -83,13 +120,12 @@ const schema = z.object({
           : quantity <= remaining;
       },
       {
-        message: (ctx) => {
+        message: () => {
           const remaining = props.transformation.remaining_quantity;
           return typeof remaining === "number"
             ? `Stock insuffisant (${remaining} restants)`
             : "Données de stock indisponibles";
         },
-        path: ["quantity"],
       },
     ),
 });
@@ -97,7 +133,7 @@ const schema = z.object({
 type Schema = z.infer<typeof schema>;
 
 const state = reactive<Partial<Schema>>({
-  step_name: "",
+  product_id: undefined,
   portions: undefined,
   quantity: undefined,
 });
@@ -109,6 +145,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
   try {
     const payload = {
       ...event.data,
+      step_name: selectedProductName.value, // Ajoute le nom du produit ici
       transformation_id: props.transformation.id,
     };
 
@@ -118,20 +155,27 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       title: "Succès",
       description: "Étape ajoutée avec succès",
       color: "success",
-      icon: "i-heroicons-check-circle",
     });
+
+    // Reset
+    state.product_id = undefined;
+    state.portions = undefined;
+    state.quantity = undefined;
 
     emit("added");
   } catch (error: any) {
     toast.add({
       title: "Erreur",
-      description:
-        error?.response?._data?.message || "Erreur lors de la création",
+      description: error?.response?._data?.message || "Erreur lors de la création",
       color: "error",
-      icon: "i-heroicons-x-circle",
     });
   } finally {
     loading.value = false;
   }
 };
+
+// Chargement initial
+onMounted(() => {
+  loadProducts();
+});
 </script>
