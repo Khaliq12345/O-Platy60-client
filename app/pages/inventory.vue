@@ -12,10 +12,12 @@
           @add="isAddModalOpen = true" 
         />
 
-        <div class="grid gap-2 items-center grid-cols-1 md:grid-cols-3">
-          <InventoryWeekSelector />
-          <InventoryFilters class="md:col-span-2" />
-        </div>
+        <!-- Filtres avec sélecteur de date intégré -->
+        <Filters 
+          v-model:search-query="filterData.search"
+          v-model:date-range="dateRange"
+          @filter="handleFilter"
+        />
 
         <Loading v-if="loading" />
 
@@ -28,13 +30,14 @@
         <InventoryEmptyState v-else />
       </div>
     </template>
-
   </UDashboardPanel>
+
   <InventoryAdd v-model:open="isAddModalOpen" />
 </template>
 
 <script setup lang="ts">
-import { addDays, format, startOfWeek } from "date-fns";
+import { addDays, format, startOfWeek, parseISO } from "date-fns";
+import { CalendarDate } from "@internationalized/date";
 import type { ProductsSummary } from "~/utils/inventoryextra";
 
 const { post } = useApi();
@@ -42,15 +45,28 @@ const { post } = useApi();
 const loading = ref(true);
 const productsData = ref<ProductsSummary>({});
 const isAddModalOpen = ref(false);
-const currentWeekStart = ref(startOfWeek(new Date(), { weekStartsOn: 1 }));
+
+const now = new Date();
+const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+const weekEnd = addDays(weekStart, 6);
+
+// Init avec des strings yyyy-MM-dd - Filters convertira en CalendarDate
+const dateRange = ref({
+  start: format(weekStart, "yyyy-MM-dd"),
+  end: format(weekEnd, "yyyy-MM-dd"),
+});
+
 const filterData = reactive({ search: "" });
 
+// Fournit weekStart pour compatibilité composants enfants
+const currentWeekStart = computed(() => parseISO(dateRange.value.start));
 provide("weekStart", currentWeekStart);
-provide("filterInfo", filterData);
 
+// Calcule les 7 jours à partir de dateRange.start
 const weekDays = computed(() => {
+  const start = parseISO(dateRange.value.start);
   return Array.from({ length: 7 }, (_, i) => 
-    format(addDays(currentWeekStart.value, i), "yyyy-MM-dd")
+    format(addDays(start, i), "yyyy-MM-dd")
   );
 });
 
@@ -58,8 +74,8 @@ async function loadData() {
   loading.value = true;
   try {
     const response = await post<ProductsSummary>("/products/transaction/summary", {
-      start_date: format(currentWeekStart.value, "yyyy-MM-dd"),
-      end_date: format(addDays(currentWeekStart.value, 6), "yyyy-MM-dd"),
+      start_date: dateRange.value.start,
+      end_date: dateRange.value.end,
       search: filterData.search,
     });
     productsData.value = response ?? {};
@@ -70,6 +86,12 @@ async function loadData() {
   }
 }
 
-watch(() => currentWeekStart.value, loadData, { immediate: true });
-watch(() => filterData.search, loadData);
+// Quand on clique sur filtre, Filters met à jour dateRange puis émet filter
+function handleFilter() {
+  // dateRange a déjà été mis à jour par Filters via v-model
+  loadData();
+}
+
+// Init
+loadData();
 </script>

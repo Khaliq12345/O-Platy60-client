@@ -1,5 +1,5 @@
 <template>
-  <div class="p-1 flex flex-col justify-between h-full lg:mx-auto">
+  <div class="space-y-4 p-1 flex flex-col h-full lg:mx-auto">
     <!-- En-tête -->
     <div class="mb-2">
       <PageHeader 
@@ -20,7 +20,6 @@
       v-else
       :ingredients="ingredients"
       :categories="categories"
-      class="grow"
     />
 
     <LimitPagination

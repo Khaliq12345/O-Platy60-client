@@ -30,69 +30,35 @@
           </div>
         </div>
 
-        <!-- Stock Initial -->
-        <div class="grid grid-cols-8 gap-4 py-3 px-2">
-          <div class="text-sm text-gray-600 dark:text-gray-400">Stock Initial</div>
+        <!-- Lignes de métriques avec séparateurs -->
+        <div
+          v-for="(row, index) in metricRows"
+          :key="row.key"
+          class="grid grid-cols-8 gap-4 py-3 px-2"
+          :class="[
+            row.bgClass,
+            index > 0 ? 'border-t border-gray-200 dark:border-gray-700' : ''
+          ]"
+        >
+          <div :class="['text-sm', row.labelClass]">{{ row.label }}</div>
           <div
             v-for="day in days"
             :key="day"
             class="text-center text-sm"
+            :class="row.valueClass"
           >
-            {{ getMetric(productName, day, 'initial_portion') }}
-          </div>
-        </div>
-
-        <!-- Entrées -->
-        <div class="grid grid-cols-8 gap-4 py-3 px-2 bg-gray-50 dark:bg-gray-800/50 rounded-md">
-          <div class="text-sm text-gray-600 dark:text-gray-400">Entrées</div>
-          <div
-            v-for="day in days"
-            :key="day"
-            class="text-center text-sm"
-          >
-            {{ getMetric(productName, day, 'entry') }}
-          </div>
-        </div>
-
-        <!-- Stock Final -->
-        <div class="grid grid-cols-8 gap-4 py-3 px-2">
-          <div class="text-sm text-gray-600 dark:text-gray-400">Stock Final</div>
-          <div
-            v-for="day in days"
-            :key="day"
-            class="text-center text-sm font-medium text-blue-600"
-          >
-            {{ getMetric(productName, day, 'final_portion') }}
-          </div>
-        </div>
-
-        <!-- Ventes -->
-        <div class="grid grid-cols-8 gap-4 py-3 px-2 bg-primary-50 dark:bg-primary-950/30 rounded-md">
-          <div class="text-sm text-primary font-medium">Ventes</div>
-          <div
-            v-for="(day, idx) in days"
-            :key="day"
-            class="px-1"
-          >
-            <UInputNumber
-              v-model="saleInputs[productName][idx]"
-              :min="0"
-              size="sm"
-              class="w-full"
-              @blur="handleUpdateSale(productName, idx)"
-            />
-          </div>
-        </div>
-
-        <!-- Restant -->
-        <div class="grid grid-cols-8 gap-4 py-3 px-2 bg-green-50 dark:bg-green-950/30 rounded-md">
-          <div class="text-sm text-green-600 font-medium">Restant</div>
-          <div
-            v-for="day in days"
-            :key="day"
-            class="text-center text-sm font-medium text-green-700"
-          >
-            {{ getMetric(productName, day, 'remaining') }}
+            <template v-if="row.key === 'sale'">
+              <UInputNumber
+                v-model="saleInputs[productName][days.indexOf(day)]"
+                :min="0"
+                size="sm"
+                class="w-full"
+                @blur="handleUpdateSale(productName, days.indexOf(day))"
+              />
+            </template>
+            <template v-else>
+              {{ getMetric(productName, day, row.metricKey) }}
+            </template>
           </div>
         </div>
       </div>
@@ -124,6 +90,50 @@ const {
   products: productsRef,
   days: daysRef,
 });
+
+// Configuration des lignes de métriques
+const metricRows = [
+  {
+    key: 'initial',
+    label: 'Stock Initial',
+    metricKey: 'initial_portion',
+    labelClass: 'text-gray-600 dark:text-gray-400',
+    valueClass: '',
+    bgClass: '',
+  },
+  {
+    key: 'entry',
+    label: 'Entrées',
+    metricKey: 'entry',
+    labelClass: 'text-gray-600 dark:text-gray-400',
+    valueClass: '',
+    bgClass: 'bg-gray-50 dark:bg-gray-800/50 rounded-md',
+  },
+  {
+    key: 'final',
+    label: 'Stock Final',
+    metricKey: 'final_portion',
+    labelClass: 'text-gray-600 dark:text-gray-400',
+    valueClass: 'font-medium text-blue-600',
+    bgClass: '',
+  },
+  {
+    key: 'sale',
+    label: 'Ventes',
+    metricKey: 'sale',
+    labelClass: 'text-primary font-medium',
+    valueClass: '',
+    bgClass: 'bg-primary-50 dark:bg-primary-950/30 rounded-md',
+  },
+  {
+    key: 'remaining',
+    label: 'Restant',
+    metricKey: 'remaining',
+    labelClass: 'text-green-600 font-medium',
+    valueClass: 'font-medium text-green-700',
+    bgClass: 'bg-green-50 dark:bg-green-950/30 rounded-md',
+  },
+];
 
 function handleUpdateSale(productName: string, dayIndex: number) {
   updateSale(productName, dayIndex, put, toast);

@@ -27,36 +27,33 @@
           </template>
 
           <template #description>
-            <div class="space-y-3">
-              <div class="flex justify-between">
-                <span class="text-xs text-gray-400">Stock Initial</span>
-                <span>{{ getMetric(productName, day, 'initial_portion') }}</span>
-              </div>
-
-              <div class="flex justify-between">
-                <span class="text-xs text-gray-400">Entrées</span>
-                <span>{{ getMetric(productName, day, 'entry') }}</span>
-              </div>
-
-              <div>
-                <div class="text-xs text-primary mb-1">Sortie</div>
-                <UInputNumber
-                  v-model.number="saleInputs[productName][idx]"
-                  :min="0"
-                  size="lg"
-                  class="w-full"
-                  @blur="handleUpdateSale(productName, idx)"
-                />
-              </div>
-
-              <div class="flex justify-between">
-                <span class="text-xs text-blue-400">Stock Final</span>
-                <span class="text-blue-600">{{ getMetric(productName, day, 'final_portion') }}</span>
-              </div>
-
-              <div class="flex justify-between">
-                <span class="text-xs text-green-400">Restant</span>
-                <span class="text-green-600">{{ getMetric(productName, day, 'remaining') }}</span>
+            <div class="mt-2 space-y-2">
+              <!-- Métriques avec séparateurs -->
+              <div
+                v-for="(metric, mIndex) in mobileMetrics"
+                :key="metric.key"
+                class="py-2"
+                :class="[
+                  metric.bgClass,
+                  mIndex > 0 ? 'border-t border-gray-200 dark:border-gray-700' : ''
+                ]"
+              >
+                <div v-if="metric.key === 'sale'" class="space-y-2">
+                  <div :class="['text-xs', metric.labelClass]">{{ metric.label }}</div>
+                  <UInputNumber
+                    v-model.number="saleInputs[productName][idx]"
+                    :min="0"
+                    size="lg"
+                    class="w-full"
+                    @blur="handleUpdateSale(productName, idx)"
+                  />
+                </div>
+                <div v-else class="flex justify-between">
+                  <span :class="['text-xs', metric.labelClass]">{{ metric.label }}</span>
+                  <span :class="metric.valueClass">
+                    {{ getMetric(productName, day, metric.metricKey) }}
+                  </span>
+                </div>
               </div>
             </div>
           </template>
@@ -90,6 +87,50 @@ const {
   products: productsRef,
   days: daysRef,
 });
+
+// Configuration des métriques mobile
+const mobileMetrics = [
+  {
+    key: 'initial',
+    label: 'Stock Initial',
+    metricKey: 'initial_portion',
+    labelClass: 'text-gray-400',
+    valueClass: '',
+    bgClass: '',
+  },
+  {
+    key: 'entry',
+    label: 'Entrées',
+    metricKey: 'entry',
+    labelClass: 'text-gray-400',
+    valueClass: '',
+    bgClass: '',
+  },
+  {
+    key: 'final',
+    label: 'Stock Final',
+    metricKey: 'final_portion',
+    labelClass: 'text-blue-400',
+    valueClass: 'text-blue-600',
+    bgClass: '',
+  },
+  {
+    key: 'sale',
+    label: 'Sortie',
+    metricKey: 'sale',
+    labelClass: 'text-primary',
+    valueClass: '',
+    bgClass: '',
+  },
+  {
+    key: 'remaining',
+    label: 'Restant',
+    metricKey: 'remaining',
+    labelClass: 'text-green-400',
+    valueClass: 'text-green-600',
+    bgClass: '',
+  },
+];
 
 function handleUpdateSale(productName: string, dayIndex: number) {
   updateSale(productName, dayIndex, put, toast);

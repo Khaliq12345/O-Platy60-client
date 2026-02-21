@@ -8,17 +8,11 @@
         @add="isAddModalOpen = true" 
       />
 
-      <div class="md:px-4 flex items-center gap-2 mb-2">
-        <UInput
-          v-model="searchQuery"
-          name="Search"
-          icon="i-heroicons-magnifying-glass"
-          placeholder="Rechercher une catégorie..."
-          class="flex-1"
-          @keyup.enter="applyFilter"
-        />
-        <UButton icon="i-heroicons-magnifying-glass" @click="applyFilter" />
-      </div>
+      <!-- Filtres global avec recherche -->
+      <Filters 
+        v-model:search-query="query.search"
+        @filter="handleFilter"
+      />
     </div>
 
     <Loading v-if="loading" />
@@ -87,7 +81,6 @@
 
 <script setup lang="ts">
 import type { Category } from "~/types/category";
-import PageHeader from "~/components/PageHeader.vue";
 
 const { get } = useApi();
 
@@ -100,7 +93,6 @@ const query = ref({
   search: "",
 });
 
-const searchQuery = ref("");
 const isAddModalOpen = ref(false);
 const isEditModalOpen = ref(false);
 const selectedCategory = ref<Category | null>(null);
@@ -126,8 +118,7 @@ async function loadCategories() {
   }
 }
 
-function applyFilter() {
-  query.value.search = searchQuery.value;
+function handleFilter() {
   query.value.page = 1;
   loadCategories();
 }
