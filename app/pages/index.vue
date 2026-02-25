@@ -11,33 +11,37 @@
     </template>
   </UHeader>
 
-  <div class="w-full space-y-28 max-w-3/4 mx-auto">
+  <div class="w-full space-y-28 px-4">
     <!-- CTA 1 - Hero Section -->
     <UPageSection
       title="Maîtrisez vos coûts de la réception à l'assiette"
       description="Suivez vos achats en temps réel, optimisez vos rendements de transformations et réduisez le gaspillage alimentaire avec la plateforme de gestion la plus intuitive du marché."
       orientation="horizontal"
       :links="links"
-      class="mb-0"
+      class="w-full bg-amber-500"
     >
       <img
-        src="https://picsum.photos/704/1294"
-        width="352"
-        height="647"
+        src="https://picsum.photos/1294/704"
+        width="647"
+        height="352"
         alt="Illustration"
         class="rounded-lg shadow-2xl mx-auto"
       />
+      <div class="flex gap-2 items-center">
+        <UAvatarGroup :max="1">
+          <UAvatar text="+25" />
+        </UAvatarGroup>
+        <p>Nous font confiance</p>
+      </div>
     </UPageSection>
 
     <!-- Stats Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div
-        v-for="(grid, index) in grids"
-        :key="index"
-        class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 text-center border border-gray-200 dark:border-gray-700"
-      >
-        <div class="text-3xl font-bold text-primary mb-1">{{ grid.title }}</div>
-        <div class="text-sm text-gray-600 dark:text-gray-400">
+    <div
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-primary rounded-lg p-2 text-white"
+    >
+      <div v-for="(grid, index) in grids" :key="index" class="p-6 text-center">
+        <div class="text-3xl font-bold mb-1">{{ grid.title }}</div>
+        <div class="text-sm">
           {{ grid.description }}
         </div>
       </div>
@@ -64,6 +68,21 @@
       </div>
     </div>
 
+    <!-- Pricing -->
+    <UPageSection
+      title="Essayez notre offre maintenant"
+      orientation="horizontal"
+      :links="[{ label: 'Demander un essai' }]"
+    >
+      <UPricingPlan
+        title="Solo"
+        description="Pour un essai rapide."
+        price="$000"
+        discount="$000"
+        class="bg-primary"
+      />
+    </UPageSection>
+
     <!-- CTA 2 -->
     <UPageCTA
       title="Prêt à transformer la gestion de votre cuisine ?"
@@ -71,21 +90,64 @@
       :links="[
         {
           label: 'Commencer mon essai gratuit de 14 jours',
-          color: 'primary',
+          color: 'neutral',
           size: 'lg',
         },
         {
           label: 'Aucune carte de crédit requise',
           size: 'sm',
           color: 'neutral',
-          variant: 'link',
+          variant: 'ghost',
         },
       ]"
-      class="text-center"
+      class="text-center rounded-lg bg-primary"
     />
 
     <!-- Footer -->
-    <UFooter>
+    <UFooter :links="[]">
+      <template #top>
+        <div
+          class="flex gap-4 flex-col md:flex-row md:justify-between w-full mb-8"
+        >
+          <!-- Brand -->
+          <div class="col-span-2 md:col-span-1">
+            <h3 class="text-lg font-bold mb-2">O-Platy60</h3>
+            <p class="text-sm text-muted mb-4 text-left">
+              La solution de gestion de cuisine <br />
+              la plus intuitive pour les professionnels de la restauration.
+            </p>
+            <div class="flex gap-3">
+              <UButton
+                icon="i-lucide-twitter"
+                color="neutral"
+                variant="ghost"
+                size="sm"
+              />
+              <UButton
+                icon="i-lucide-linkedin"
+                color="neutral"
+                variant="ghost"
+                size="sm"
+              />
+              <UButton
+                icon="i-lucide-instagram"
+                color="neutral"
+                variant="ghost"
+                size="sm"
+              />
+            </div>
+          </div>
+
+          <!-- Footer Columns - Remplace 3 divs -->
+          <div class="justify-self-end">
+            <UFooterColumns
+              :columns="footerColumns"
+              class="col-span-2 md:col-span-3"
+            />
+          </div>
+        </div>
+      </template>
+
       <template #left>
         <p class="text-muted text-sm">
           O-Platy60 © {{ new Date().getFullYear() }}
@@ -93,7 +155,7 @@
       </template>
 
       <template #right>
-        <p class="text-muted text-sm">
+        <p class="text-muted text-sm md:text-end">
           Fièrement développé par les passionnés de gastronomie.
         </p>
       </template>
@@ -103,8 +165,9 @@
 
 <script setup lang="ts">
 definePageMeta({ layout: false });
-import type { ButtonProps } from "@nuxt/ui";
+import type { ButtonProps, FooterColumn } from "@nuxt/ui";
 
+// Hero buttons
 const links = ref<ButtonProps[]>([
   {
     label: "Démarrer maintenant",
@@ -120,6 +183,7 @@ const links = ref<ButtonProps[]>([
   },
 ]);
 
+// Stats data
 const grids = [
   { title: "150+", description: "Restaurants actifs" },
   { title: "15%", description: "Économies moyennes" },
@@ -127,6 +191,7 @@ const grids = [
   { title: "10k+", description: "Articles gérés" },
 ];
 
+// Features cards
 const cards = ref([
   {
     title: "Gestion des achats",
@@ -147,4 +212,35 @@ const cards = ref([
     icon: "i-lucide-bell-ring",
   },
 ]);
+
+// Footer columns data pour UFooterColumns
+const footerColumns: FooterColumn[] = [
+  {
+    label: "Produit",
+    children: [
+      { label: "Fonctionnalités", to: "/features" },
+      { label: "Tarifs", to: "/pricing" },
+      { label: "Démo", to: "/demo" },
+      { label: "Mises à jour", to: "/updates" },
+    ],
+  },
+  {
+    label: "Ressources",
+    children: [
+      { label: "Blog", to: "/blog" },
+      { label: "Guides", to: "/guides" },
+      { label: "Centre d'aide", to: "/help" },
+      { label: "API", to: "/api" },
+    ],
+  },
+  {
+    label: "Entreprise",
+    children: [
+      { label: "À propos", to: "/about" },
+      { label: "Contact", to: "/contact" },
+      { label: "Carrières", to: "/careers" },
+      { label: "Partenaires", to: "/partners" },
+    ],
+  },
+];
 </script>
