@@ -11,7 +11,7 @@
     </template>
   </UHeader>
 
-  <div class="w-full space-y-16 max-w-3/4 mx-auto">
+  <div class="w-full space-y-28 max-w-3/4 mx-auto">
     <!-- CTA 1 - Hero Section -->
     <UPageSection
       title="Maîtrisez vos coûts de la réception à l'assiette"
