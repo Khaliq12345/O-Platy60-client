@@ -15,17 +15,22 @@
     <!-- CTA 1 - Hero Section -->
     <UPageSection
       title="Maîtrisez vos coûts de la réception à l'assiette"
-      description="Suivez vos achats en temps réel, optimisez vos rendements de transformations et réduisez le gaspillage alimentaire avec la plateforme de gestion la plus intuitive du marché."
+      description="Suivez vos achats en temps réel..."
       orientation="horizontal"
       :links="links"
-      class="w-full bg-amber-500"
+      class=""
+      :ui="{
+        root: '', // root cause of issues
+        container: '',
+        description: 'text-muted dark:text-white',
+      }"
     >
       <img
         src="https://picsum.photos/1294/704"
         width="647"
         height="352"
         alt="Illustration"
-        class="rounded-lg shadow-2xl mx-auto"
+        class="ms-auto w-full rounded-lg shadow-2xl"
       />
       <div class="flex gap-2 items-center">
         <UAvatarGroup :max="1">
@@ -80,6 +85,16 @@
         price="$000"
         discount="$000"
         class="bg-primary"
+        :features="[
+          'Accès au mode groupe.',
+          'Accès à toutes les fonctionnalités de bases.',
+          'Accès à la gestion des ventes et des stocks.',
+        ]"
+        :ui="{
+          featureTitle: 'text-white dark:text-black ',
+          discount: 'text-white dark:text-black',
+          description: 'text-white dark:text-black',
+        }"
       />
     </UPageSection>
 
@@ -101,6 +116,7 @@
         },
       ]"
       class="text-center rounded-lg bg-primary"
+      :ui="{ description: 'text-white dark:text-black' }"
     />
 
     <!-- Footer -->
