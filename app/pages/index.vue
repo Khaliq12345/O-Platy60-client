@@ -26,8 +26,8 @@
       :links="links"
       class=""
       :ui="{
-        root: '', // root cause of issues
-        container: '',
+        root: '', // root cause of issues use bg to see space that it use
+        container: '', // child container cannot use flex here
         description: 'text-muted dark:text-white',
       }"
     >
