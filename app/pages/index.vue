@@ -5,6 +5,12 @@
       <h1 class="text-3xl font-bold tracking-tight">O-Platy60</h1>
     </template>
 
+    <UNavigationMenu :items="items" />
+
+    <template #body>
+      <UNavigationMenu :items="items" orientation="vertical" />
+    </template>
+
     <template #right>
       <UButton label="Connexion" to="/login" variant="ghost" />
       <UButton label="Essai gratuit" />
@@ -182,6 +188,22 @@
 <script setup lang="ts">
 definePageMeta({ layout: false });
 import type { ButtonProps, FooterColumn } from "@nuxt/ui";
+
+import type { NavigationMenuItem } from "@nuxt/ui";
+
+const route = useRoute();
+
+const items = computed<NavigationMenuItem[]>(() => [
+  {
+    label: "Fonctionnalités",
+  },
+  {
+    label: "Témoignages",
+  },
+  {
+    label: "Tarifs",
+  },
+]);
 
 // Hero buttons
 const links = ref<ButtonProps[]>([
