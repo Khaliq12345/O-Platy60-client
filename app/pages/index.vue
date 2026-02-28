@@ -1,34 +1,54 @@
 <template>
   <!-- Header -->
-  <UHeader>
-    <template #title>
-      <h1 class="text-3xl font-bold tracking-tight">O-Platy60</h1>
-    </template>
+  <UHeader toggle-side="left" title="O-Platy60">
+    <!-- Navigation desktop (center) -->
+    <UNavigationMenu :items="items" class="hidden lg:flex" />
 
-    <UNavigationMenu :items="items" />
-
-    <template #body>
-      <UNavigationMenu :items="items" orientation="vertical" />
-    </template>
-
+    <!-- Boutons desktop uniquement -->
     <template #right>
-      <UButton label="Connexion" to="/login" variant="ghost" />
-      <UButton label="Essai gratuit" />
+      <div class="hidden sm:flex items-center gap-2">
+        <UButton label="Connexion" to="/login" variant="ghost" />
+        <UButton label="Essai gratuit" />
+      </div>
+    </template>
+
+    <!-- Toggle à gauche pour éviter le conflit avec le titre -->
+    <template #toggle="{ toggle, open }">
+      <UButton
+        color="neutral"
+        variant="ghost"
+        :icon="open ? 'i-lucide-x' : 'i-lucide-menu'"
+        class="lg:hidden"
+        @click="toggle"
+      />
+    </template>
+
+    <!-- Menu mobile avec les boutons -->
+    <template #body>
+      <div class="flex flex-col gap-4 p-4">
+        <UNavigationMenu :items="items" orientation="vertical" />
+
+        <!-- Boutons dans le menu mobile -->
+        <div class="flex flex-col gap-2 sm:hidden pt-4 border-t border-default">
+          <UButton label="Connexion" to="/login" variant="ghost" block />
+          <UButton label="Essai gratuit" block />
+        </div>
+      </div>
     </template>
   </UHeader>
-
   <div class="w-full space-y-28 px-4">
     <!-- CTA 1 - Hero Section -->
     <UPageSection
       title="Maîtrisez vos coûts de la réception à l'assiette"
-      description="Suivez vos achats en temps réel..."
+      description="Suivez vos achats en temps réel, optimisez vos rendements de transformations et réduisez le gaspillage alimentaire avec la plateforme la plus intuitive du marché."
       orientation="horizontal"
       :links="links"
-      class=""
       :ui="{
-        root: '', // root cause of issues use bg to see space that it use
-        container: '', // child container cannot use flex here
-        description: 'text-muted dark:text-white',
+        container:
+          'flex flex-col-reverse lg:flex-row lg:grid lg:grid-cols-2 lg:items-center gap-8 sm:gap-16',
+        wrapper: 'flex flex-col justify-center', // Texte
+        title: 'text-center md:text-left',
+        description: 'text-muted dark:text-white text-center md:text-left',
       }"
     >
       <img
@@ -36,14 +56,8 @@
         width="647"
         height="352"
         alt="Illustration"
-        class="ms-auto w-full rounded-lg shadow-2xl"
+        class="w-full rounded-lg shadow-2xl"
       />
-      <div class="flex gap-2 items-center">
-        <UAvatarGroup :max="1">
-          <UAvatar text="+25" />
-        </UAvatarGroup>
-        <p>Nous font confiance</p>
-      </div>
     </UPageSection>
 
     <!-- Stats Grid -->
@@ -177,7 +191,7 @@
       </template>
 
       <template #right>
-        <p class="text-muted text-sm md:text-end">
+        <p class="text-muted text-sm text-center md:text-end">
           Fièrement développé par les passionnés de gastronomie.
         </p>
       </template>
