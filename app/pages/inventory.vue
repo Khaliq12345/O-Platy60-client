@@ -6,14 +6,10 @@
 
     <template #body>
       <div class="lg:p-6 lg:space-y-6 space-y-4">
-        <PageHeader 
-          title="Inventaires" 
-          show-add 
-          @add="isAddModalOpen = true" 
-        />
+        <PageHeader title="Inventaires" show-add @add="isAddModalOpen = true" />
 
         <!-- Filtres avec sélecteur de date intégré -->
-        <Filters 
+        <Filters
           v-model:search-query="filterData.search"
           v-model:date-range="dateRange"
           @filter="handleFilter"
@@ -40,7 +36,7 @@ import { addDays, format, startOfWeek, parseISO } from "date-fns";
 import { CalendarDate } from "@internationalized/date";
 import type { ProductsSummary } from "~/utils/inventoryextra";
 
-const { post } = useApi();
+const { get } = useApi();
 
 const loading = ref(true);
 const productsData = ref<ProductsSummary>({});
@@ -65,19 +61,22 @@ provide("weekStart", currentWeekStart);
 // Calcule les 7 jours à partir de dateRange.start
 const weekDays = computed(() => {
   const start = parseISO(dateRange.value.start);
-  return Array.from({ length: 7 }, (_, i) => 
-    format(addDays(start, i), "yyyy-MM-dd")
+  return Array.from({ length: 7 }, (_, i) =>
+    format(addDays(start, i), "yyyy-MM-dd"),
   );
 });
 
 async function loadData() {
   loading.value = true;
   try {
-    const response = await post<ProductsSummary>("/products/transaction/summary", {
-      start_date: dateRange.value.start,
-      end_date: dateRange.value.end,
-      search: filterData.search,
-    });
+    const response = await get<ProductsSummary>(
+      "/products/transaction/summary",
+      {
+        start_date: dateRange.value.start,
+        end_date: dateRange.value.end,
+        search: filterData.search,
+      },
+    );
     productsData.value = response ?? {};
   } catch (error) {
     productsData.value = {};
